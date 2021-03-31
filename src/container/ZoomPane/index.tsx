@@ -213,12 +213,13 @@ const ZoomPane = ({
         }
 
         // when the target element is a node, we still allow zooming
-        if (
-          (event.target.closest('.react-flow__node') || event.target.closest('.react-flow__edgeupdater')) &&
-          event.type !== 'wheel'
-        ) {
-          return false;
-        }
+        // For our use case, we want to be able to drag, even if the mouse is over a node
+        // if (
+        //   (event.target.closest('.react-flow__node') || event.target.closest('.react-flow__edgeupdater')) &&
+        //   event.type !== 'wheel'
+        // ) {
+        //   return false;
+        // }
 
         // when the target element is a node selection, we still allow zooming
         if (event.target.closest('.react-flow__nodesselection') && event.type !== 'wheel') {
