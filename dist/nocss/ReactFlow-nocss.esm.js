@@ -6298,7 +6298,7 @@ var ZoomPane = function ZoomPane(_ref) {
         } // when the target element is a node, we still allow zooming
         // For our use case, we want to be able to drag, even if the mouse is over a node
         // if (
-        //   (event.target.closest('.react-flow__node') || event.target.closest('.react-flow__edgeupdater')) &&
+        //   (event.target.closest('.react-flow__node') || event.target.closest('.react-flow__edge')) &&
         //   event.type !== 'wheel'
         // ) {
         //   return false;
@@ -8362,7 +8362,8 @@ var NodesSelection = (function (_ref) {
     onStop: function onStop(event) {
       return _onStop(event);
     },
-    nodeRef: nodeRef
+    nodeRef: nodeRef,
+    enableUserSelectHack: false
   }, /*#__PURE__*/React__default.createElement("div", {
     ref: nodeRef,
     className: "react-flow__nodesselection-rect",
@@ -8584,7 +8585,9 @@ var EdgeText = function EdgeText(_ref) {
       labelBgPadding = _ref$labelBgPadding === void 0 ? [2, 4] : _ref$labelBgPadding,
       _ref$labelBgBorderRad = _ref.labelBgBorderRadius,
       labelBgBorderRadius = _ref$labelBgBorderRad === void 0 ? 2 : _ref$labelBgBorderRad,
-      rest = _objectWithoutProperties(_ref, ["x", "y", "label", "labelStyle", "labelShowBg", "labelBgStyle", "labelBgPadding", "labelBgBorderRadius"]);
+      children = _ref.children,
+      className = _ref.className,
+      rest = _objectWithoutProperties(_ref, ["x", "y", "label", "labelStyle", "labelShowBg", "labelBgStyle", "labelBgPadding", "labelBgBorderRadius", "children", "className"]);
 
   var edgeRef = useRef(null);
 
@@ -8598,6 +8601,7 @@ var EdgeText = function EdgeText(_ref) {
       edgeTextBbox = _useState2[0],
       setEdgeTextBbox = _useState2[1];
 
+  var edgeTextClasses = cc(['react-flow__edge-textwrapper', className]);
   useEffect(function () {
     if (edgeRef.current) {
       var textBbox = edgeRef.current.getBBox();
@@ -8615,7 +8619,8 @@ var EdgeText = function EdgeText(_ref) {
   }
 
   return /*#__PURE__*/React__default.createElement("g", Object.assign({
-    transform: "translate(".concat(x - edgeTextBbox.width / 2, " ").concat(y - edgeTextBbox.height / 2, ")")
+    transform: "translate(".concat(x - edgeTextBbox.width / 2, " ").concat(y - edgeTextBbox.height / 2, ")"),
+    className: edgeTextClasses
   }, rest), labelShowBg && /*#__PURE__*/React__default.createElement("rect", {
     width: edgeTextBbox.width + 2 * labelBgPadding[0],
     x: -labelBgPadding[0],
@@ -8631,7 +8636,7 @@ var EdgeText = function EdgeText(_ref) {
     dy: "0.3em",
     ref: edgeRef,
     style: labelStyle
-  }, label));
+  }, label), children);
 };
 
 var EdgeText$1 = /*#__PURE__*/memo(EdgeText);
@@ -8861,7 +8866,7 @@ function getSmoothStepPath(_ref) {
     if (sourceX <= targetX) {
       firstCornerPath = sourceY <= targetY ? rightTopCorner(targetX, sourceY, cornerSize) : rightBottomCorner(targetX, sourceY, cornerSize);
     } else {
-      firstCornerPath = sourceY <= targetY ? bottomRightCorner(sourceX, targetY, cornerSize) : topRightCorner(sourceX, targetY, cornerSize);
+      firstCornerPath = sourceY <= targetY ? leftTopCorner(targetX, sourceY, cornerSize) : leftBottomCorner(targetX, sourceY, cornerSize);
     }
 
     secondCornerPath = '';
@@ -9295,6 +9300,7 @@ var wrapEdge = (function (EdgeComponent) {
         type = _ref.type,
         data = _ref.data,
         onClick = _ref.onClick,
+        onEdgeDoubleClick = _ref.onEdgeDoubleClick,
         selected = _ref.selected,
         animated = _ref.animated,
         label = _ref.label,
@@ -9324,7 +9330,8 @@ var wrapEdge = (function (EdgeComponent) {
         onMouseEnter = _ref.onMouseEnter,
         onMouseMove = _ref.onMouseMove,
         onMouseLeave = _ref.onMouseLeave,
-        edgeUpdaterRadius = _ref.edgeUpdaterRadius;
+        edgeUpdaterRadius = _ref.edgeUpdaterRadius,
+        onEdgeUpdateStart = _ref.onEdgeUpdateStart;
     var addSelectedElements = useStoreActions(function (actions) {
       return actions.addSelectedElements;
     });
@@ -9383,6 +9390,9 @@ var wrapEdge = (function (EdgeComponent) {
 
       onClick === null || onClick === void 0 ? void 0 : onClick(event, edgeElement);
     }, [elementsSelectable, edgeElement, onClick]);
+    var onEdgeDoubleClickHandler = useCallback(function (event) {
+      onEdgeDoubleClick === null || onEdgeDoubleClick === void 0 ? void 0 : onEdgeDoubleClick(event, edgeElement);
+    }, [edgeElement, onEdgeDoubleClick]);
     var onEdgeContextMenu = useCallback(function (event) {
       onContextMenu === null || onContextMenu === void 0 ? void 0 : onContextMenu(event, edgeElement);
     }, [edgeElement, onContextMenu]);
@@ -9404,8 +9414,9 @@ var wrapEdge = (function (EdgeComponent) {
       };
 
       var isTarget = isSourceHandle;
+      onEdgeUpdateStart === null || onEdgeUpdateStart === void 0 ? void 0 : onEdgeUpdateStart(event, edgeElement);
       onMouseDown(event, handleId, nodeId, setConnectionNodeId, setPosition, onConnectEdge, isTarget, isValidConnection, connectionMode);
-    }, [id, source, target, type, sourceHandleId, targetHandleId, setConnectionNodeId, setPosition]);
+    }, [id, source, target, type, sourceHandleId, targetHandleId, setConnectionNodeId, setPosition, edgeElement]);
     var onEdgeUpdaterSourceMouseDown = useCallback(function (event) {
       handleEdgeUpdater(event, true);
     }, [id, source, sourceHandleId, handleEdgeUpdater]);
@@ -9426,20 +9437,12 @@ var wrapEdge = (function (EdgeComponent) {
     return /*#__PURE__*/React__default.createElement("g", {
       className: edgeClasses,
       onClick: onEdgeClick,
+      onDoubleClick: onEdgeDoubleClickHandler,
       onContextMenu: onEdgeContextMenu,
       onMouseEnter: onEdgeMouseEnter,
       onMouseMove: onEdgeMouseMove,
       onMouseLeave: onEdgeMouseLeave
-    }, handleEdgeUpdate && /*#__PURE__*/React__default.createElement("g", {
-      onMouseDown: onEdgeUpdaterSourceMouseDown,
-      onMouseEnter: onEdgeUpdaterMouseEnter,
-      onMouseOut: onEdgeUpdaterMouseOut
-    }, /*#__PURE__*/React__default.createElement(EdgeAnchor, {
-      position: sourcePosition,
-      centerX: sourceX,
-      centerY: sourceY,
-      radius: edgeUpdaterRadius
-    })), /*#__PURE__*/React__default.createElement(EdgeComponent, {
+    }, /*#__PURE__*/React__default.createElement(EdgeComponent, {
       id: id,
       source: source,
       target: target,
@@ -9464,6 +9467,15 @@ var wrapEdge = (function (EdgeComponent) {
       sourceHandleId: sourceHandleId,
       targetHandleId: targetHandleId
     }), handleEdgeUpdate && /*#__PURE__*/React__default.createElement("g", {
+      onMouseDown: onEdgeUpdaterSourceMouseDown,
+      onMouseEnter: onEdgeUpdaterMouseEnter,
+      onMouseOut: onEdgeUpdaterMouseOut
+    }, /*#__PURE__*/React__default.createElement(EdgeAnchor, {
+      position: sourcePosition,
+      centerX: sourceX,
+      centerY: sourceY,
+      radius: edgeUpdaterRadius
+    })), handleEdgeUpdate && /*#__PURE__*/React__default.createElement("g", {
       onMouseDown: onEdgeUpdaterTargetMouseDown,
       onMouseEnter: onEdgeUpdaterMouseEnter,
       onMouseOut: onEdgeUpdaterMouseOut
@@ -9731,7 +9743,9 @@ var Edge = function Edge(_ref) {
     onMouseEnter: props.onEdgeMouseEnter,
     onMouseMove: props.onEdgeMouseMove,
     onMouseLeave: props.onEdgeMouseLeave,
-    edgeUpdaterRadius: props.edgeUpdaterRadius
+    edgeUpdaterRadius: props.edgeUpdaterRadius,
+    onEdgeDoubleClick: props.onEdgeDoubleClick,
+    onEdgeUpdateStart: props.onEdgeUpdateStart
   });
 };
 
@@ -9951,6 +9965,7 @@ var GraphView = function GraphView(_ref) {
       onLoad = _ref.onLoad,
       onElementClick = _ref.onElementClick,
       onNodeDoubleClick = _ref.onNodeDoubleClick,
+      onEdgeDoubleClick = _ref.onEdgeDoubleClick,
       onNodeMouseEnter = _ref.onNodeMouseEnter,
       onNodeMouseMove = _ref.onNodeMouseMove,
       onNodeMouseLeave = _ref.onNodeMouseLeave,
@@ -10005,7 +10020,8 @@ var GraphView = function GraphView(_ref) {
       onEdgeMouseEnter = _ref.onEdgeMouseEnter,
       onEdgeMouseMove = _ref.onEdgeMouseMove,
       onEdgeMouseLeave = _ref.onEdgeMouseLeave,
-      edgeUpdaterRadius = _ref.edgeUpdaterRadius;
+      edgeUpdaterRadius = _ref.edgeUpdaterRadius,
+      onEdgeUpdateStart = _ref.onEdgeUpdateStart;
   var isInitialized = useRef(false);
   var setOnConnect = useStoreActions(function (actions) {
     return actions.setOnConnect;
@@ -10197,6 +10213,7 @@ var GraphView = function GraphView(_ref) {
   }), /*#__PURE__*/React__default.createElement(EdgeRenderer$1, {
     edgeTypes: edgeTypes,
     onElementClick: onElementClick,
+    onEdgeDoubleClick: onEdgeDoubleClick,
     connectionLineType: connectionLineType,
     connectionLineStyle: connectionLineStyle,
     connectionLineComponent: connectionLineComponent,
@@ -10209,6 +10226,7 @@ var GraphView = function GraphView(_ref) {
     onEdgeMouseEnter: onEdgeMouseEnter,
     onEdgeMouseMove: onEdgeMouseMove,
     onEdgeMouseLeave: onEdgeMouseLeave,
+    onEdgeUpdateStart: onEdgeUpdateStart,
     edgeUpdaterRadius: edgeUpdaterRadius
   }));
 };
@@ -10384,6 +10402,7 @@ var wrapNode = (function (NodeComponent) {
         snapGrid = _ref.snapGrid,
         isDragging = _ref.isDragging,
         resizeObserver = _ref.resizeObserver;
+    var observerInitialized = useRef(false);
     var updateNodeDimensions = useStoreActions(function (actions) {
       return actions.updateNodeDimensions;
     });
@@ -10415,10 +10434,11 @@ var wrapNode = (function (NodeComponent) {
       return _objectSpread$4({
         zIndex: selected ? 10 : 3,
         transform: "translate(".concat(xPos, "px,").concat(yPos, "px)"),
-        pointerEvents: isSelectable || isDraggable || onClick ? 'all' : 'none',
+        pointerEvents: isSelectable || isDraggable || onClick || onMouseEnter || onMouseMove || onMouseLeave ? 'all' : 'none',
+        // prevents jumping of nodes on start
         opacity: isInitialized ? 1 : 0
       }, style);
-    }, [selected, xPos, yPos, isSelectable, isDraggable, onClick, isInitialized, style]);
+    }, [selected, xPos, yPos, isSelectable, isDraggable, onClick, isInitialized, style, onMouseEnter, onMouseMove, onMouseLeave]);
     var onMouseEnterHandler = useMemo(function () {
       if (!onMouseEnter || isDragging) {
         return;
@@ -10519,8 +10539,10 @@ var wrapNode = (function (NodeComponent) {
     var onNodeDoubleClickHandler = useCallback(function (event) {
       onNodeDoubleClick === null || onNodeDoubleClick === void 0 ? void 0 : onNodeDoubleClick(event, node);
     }, [node, onNodeDoubleClick]);
-    useEffect(function () {
-      if (nodeElement.current && !isHidden) {
+    useLayoutEffect(function () {
+      // the resize observer calls an updateNodeDimensions initially.
+      // We don't need to force another dimension update if it hasn't happened yet
+      if (nodeElement.current && !isHidden && observerInitialized.current) {
         updateNodeDimensions([{
           id: id,
           nodeElement: nodeElement.current,
@@ -10530,14 +10552,13 @@ var wrapNode = (function (NodeComponent) {
     }, [id, isHidden, sourcePosition, targetPosition]);
     useEffect(function () {
       if (nodeElement.current) {
+        observerInitialized.current = true;
         var currNode = nodeElement.current;
         resizeObserver === null || resizeObserver === void 0 ? void 0 : resizeObserver.observe(currNode);
         return function () {
           return resizeObserver === null || resizeObserver === void 0 ? void 0 : resizeObserver.unobserve(currNode);
         };
       }
-
-      return;
     }, []);
 
     if (isHidden) {
@@ -10556,7 +10577,8 @@ var wrapNode = (function (NodeComponent) {
       disabled: !isDraggable,
       cancel: ".nodrag",
       nodeRef: nodeElement,
-      grid: grid
+      grid: grid,
+      enableUserSelectHack: false
     }, /*#__PURE__*/React__default.createElement("div", {
       className: nodeClasses,
       ref: nodeElement,
@@ -11103,7 +11125,7 @@ var initialState = {
   nodesConnectable: true,
   elementsSelectable: true,
   multiSelectionActive: false,
-  reactFlowVersion: "9.4.2" 
+  reactFlowVersion: "9.5.4" 
 };
 var store = configureStore(initialState);
 
@@ -11190,7 +11212,7 @@ var ReactFlow = /*#__PURE__*/forwardRef(function (_ref, ref) {
       _ref$snapGrid = _ref.snapGrid,
       snapGrid = _ref$snapGrid === void 0 ? [15, 15] : _ref$snapGrid,
       _ref$onlyRenderVisibl = _ref.onlyRenderVisibleElements,
-      onlyRenderVisibleElements = _ref$onlyRenderVisibl === void 0 ? true : _ref$onlyRenderVisibl,
+      onlyRenderVisibleElements = _ref$onlyRenderVisibl === void 0 ? false : _ref$onlyRenderVisibl,
       _ref$selectNodesOnDra = _ref.selectNodesOnDrag,
       selectNodesOnDrag = _ref$selectNodesOnDra === void 0 ? true : _ref$selectNodesOnDra,
       nodesDraggable = _ref.nodesDraggable,
@@ -11227,16 +11249,18 @@ var ReactFlow = /*#__PURE__*/forwardRef(function (_ref, ref) {
       children = _ref.children,
       onEdgeUpdate = _ref.onEdgeUpdate,
       onEdgeContextMenu = _ref.onEdgeContextMenu,
+      onEdgeDoubleClick = _ref.onEdgeDoubleClick,
       onEdgeMouseEnter = _ref.onEdgeMouseEnter,
       onEdgeMouseMove = _ref.onEdgeMouseMove,
       onEdgeMouseLeave = _ref.onEdgeMouseLeave,
+      onEdgeUpdateStart = _ref.onEdgeUpdateStart,
       _ref$edgeUpdaterRadiu = _ref.edgeUpdaterRadius,
       edgeUpdaterRadius = _ref$edgeUpdaterRadiu === void 0 ? 10 : _ref$edgeUpdaterRadiu,
       _ref$nodeTypesId = _ref.nodeTypesId,
       nodeTypesId = _ref$nodeTypesId === void 0 ? '1' : _ref$nodeTypesId,
       _ref$edgeTypesId = _ref.edgeTypesId,
       edgeTypesId = _ref$edgeTypesId === void 0 ? '1' : _ref$edgeTypesId,
-      rest = _objectWithoutProperties(_ref, ["elements", "className", "nodeTypes", "edgeTypes", "onElementClick", "onLoad", "onMove", "onMoveStart", "onMoveEnd", "onElementsRemove", "onConnect", "onConnectStart", "onConnectStop", "onConnectEnd", "onNodeMouseEnter", "onNodeMouseMove", "onNodeMouseLeave", "onNodeContextMenu", "onNodeDoubleClick", "onNodeDragStart", "onNodeDrag", "onNodeDragStop", "onSelectionChange", "onSelectionDragStart", "onSelectionDrag", "onSelectionDragStop", "onSelectionContextMenu", "connectionMode", "connectionLineType", "connectionLineStyle", "connectionLineComponent", "deleteKeyCode", "selectionKeyCode", "multiSelectionKeyCode", "zoomActivationKeyCode", "snapToGrid", "snapGrid", "onlyRenderVisibleElements", "selectNodesOnDrag", "nodesDraggable", "nodesConnectable", "elementsSelectable", "minZoom", "maxZoom", "defaultZoom", "defaultPosition", "translateExtent", "nodeExtent", "arrowHeadColor", "markerEndId", "zoomOnScroll", "zoomOnPinch", "panOnScroll", "panOnScrollSpeed", "panOnScrollMode", "zoomOnDoubleClick", "paneMoveable", "onPaneClick", "onPaneScroll", "onPaneContextMenu", "children", "onEdgeUpdate", "onEdgeContextMenu", "onEdgeMouseEnter", "onEdgeMouseMove", "onEdgeMouseLeave", "edgeUpdaterRadius", "nodeTypesId", "edgeTypesId"]);
+      rest = _objectWithoutProperties(_ref, ["elements", "className", "nodeTypes", "edgeTypes", "onElementClick", "onLoad", "onMove", "onMoveStart", "onMoveEnd", "onElementsRemove", "onConnect", "onConnectStart", "onConnectStop", "onConnectEnd", "onNodeMouseEnter", "onNodeMouseMove", "onNodeMouseLeave", "onNodeContextMenu", "onNodeDoubleClick", "onNodeDragStart", "onNodeDrag", "onNodeDragStop", "onSelectionChange", "onSelectionDragStart", "onSelectionDrag", "onSelectionDragStop", "onSelectionContextMenu", "connectionMode", "connectionLineType", "connectionLineStyle", "connectionLineComponent", "deleteKeyCode", "selectionKeyCode", "multiSelectionKeyCode", "zoomActivationKeyCode", "snapToGrid", "snapGrid", "onlyRenderVisibleElements", "selectNodesOnDrag", "nodesDraggable", "nodesConnectable", "elementsSelectable", "minZoom", "maxZoom", "defaultZoom", "defaultPosition", "translateExtent", "nodeExtent", "arrowHeadColor", "markerEndId", "zoomOnScroll", "zoomOnPinch", "panOnScroll", "panOnScrollSpeed", "panOnScrollMode", "zoomOnDoubleClick", "paneMoveable", "onPaneClick", "onPaneScroll", "onPaneContextMenu", "children", "onEdgeUpdate", "onEdgeContextMenu", "onEdgeDoubleClick", "onEdgeMouseEnter", "onEdgeMouseMove", "onEdgeMouseLeave", "onEdgeUpdateStart", "edgeUpdaterRadius", "nodeTypesId", "edgeTypesId"]);
 
   var nodeTypesParsed = useMemo(function () {
     return createNodeTypes(nodeTypes);
@@ -11308,9 +11332,11 @@ var ReactFlow = /*#__PURE__*/forwardRef(function (_ref, ref) {
     onSelectionContextMenu: onSelectionContextMenu,
     onEdgeUpdate: onEdgeUpdate,
     onEdgeContextMenu: onEdgeContextMenu,
+    onEdgeDoubleClick: onEdgeDoubleClick,
     onEdgeMouseEnter: onEdgeMouseEnter,
     onEdgeMouseMove: onEdgeMouseMove,
     onEdgeMouseLeave: onEdgeMouseLeave,
+    onEdgeUpdateStart: onEdgeUpdateStart,
     edgeUpdaterRadius: edgeUpdaterRadius
   }), /*#__PURE__*/React__default.createElement(ElementUpdater, {
     elements: elements
@@ -11347,7 +11373,8 @@ var MiniMapNode = function MiniMapNode(_ref) {
       strokeColor = _ref.strokeColor,
       strokeWidth = _ref.strokeWidth,
       className = _ref.className,
-      borderRadius = _ref.borderRadius;
+      borderRadius = _ref.borderRadius,
+      shapeRendering = _ref.shapeRendering;
 
   var _ref2 = style || {},
       background = _ref2.background,
@@ -11364,7 +11391,8 @@ var MiniMapNode = function MiniMapNode(_ref) {
     height: height,
     fill: fill,
     stroke: strokeColor,
-    strokeWidth: strokeWidth
+    strokeWidth: strokeWidth,
+    shapeRendering: shapeRendering
   });
 };
 
@@ -11438,33 +11466,45 @@ var MiniMap = function MiniMap(_ref) {
   var y = boundingRect.y - (viewHeight - boundingRect.height) / 2 - offset;
   var width = viewWidth + offset * 2;
   var height = viewHeight + offset * 2;
+  var shapeRendering = typeof window === "undefined" || !!window.chrome ? "crispEdges" : "geometricPrecision";
+  var nodesToRender = useMemo(function () {
+    return nodes.filter(function (node) {
+      return !node.isHidden;
+    }).map(function (node) {
+      return /*#__PURE__*/React__default.createElement(MiniMapNode$1, {
+        key: node.id,
+        x: node.__rf.position.x,
+        y: node.__rf.position.y,
+        width: node.__rf.width,
+        height: node.__rf.height,
+        style: node.style,
+        className: nodeClassNameFunc(node),
+        color: nodeColorFunc(node),
+        borderRadius: nodeBorderRadius,
+        strokeColor: nodeStrokeColorFunc(node),
+        strokeWidth: nodeStrokeWidth,
+        shapeRendering: shapeRendering
+      });
+    });
+  }, [nodes, shapeRendering, nodeStrokeWidth, nodeBorderRadius]);
   return /*#__PURE__*/React__default.createElement("svg", {
     width: elementWidth,
     height: elementHeight,
     viewBox: "".concat(x, " ").concat(y, " ").concat(width, " ").concat(height),
     style: style,
     className: mapClasses
-  }, nodes.filter(function (node) {
-    return !node.isHidden;
-  }).map(function (node) {
-    return /*#__PURE__*/React__default.createElement(MiniMapNode$1, {
-      key: node.id,
-      x: node.__rf.position.x,
-      y: node.__rf.position.y,
-      width: node.__rf.width,
-      height: node.__rf.height,
-      style: node.style,
-      className: nodeClassNameFunc(node),
-      color: nodeColorFunc(node),
-      borderRadius: nodeBorderRadius,
-      strokeColor: nodeStrokeColorFunc(node),
-      strokeWidth: nodeStrokeWidth
-    });
-  }), /*#__PURE__*/React__default.createElement("path", {
+  }, nodesToRender, /*#__PURE__*/React__default.createElement("path", {
     className: "react-flow__minimap-mask",
     d: "M".concat(x - offset, ",").concat(y - offset, "h").concat(width + offset * 2, "v").concat(height + offset * 2, "h").concat(-width - offset * 2, "z\n        M").concat(viewBB.x, ",").concat(viewBB.y, "h").concat(viewBB.width, "v").concat(viewBB.height, "h").concat(-viewBB.width, "z"),
     fill: maskColor,
     fillRule: "evenodd"
+  }), /*#__PURE__*/React__default.createElement("rect", {
+    x: viewBB.x,
+    y: viewBB.y,
+    width: viewBB.width,
+    height: viewBB.height,
+    stroke: "rgb(194, 200, 204)",
+    fill: "none"
   }));
 };
 
@@ -11539,11 +11579,11 @@ function SvgUnlock(props) {
 var ControlButton = function ControlButton(_ref) {
   var children = _ref.children,
       className = _ref.className,
-      onClick = _ref.onClick;
-  return /*#__PURE__*/React__default.createElement("div", {
-    className: cc(['react-flow__controls-button', className]),
-    onClick: onClick
-  }, children);
+      rest = _objectWithoutProperties(_ref, ["children", "className"]);
+
+  return /*#__PURE__*/React__default.createElement("div", Object.assign({
+    className: cc(['react-flow__controls-button', className])
+  }, rest), children);
 };
 
 var Controls = function Controls(_ref2) {
@@ -11561,6 +11601,12 @@ var Controls = function Controls(_ref2) {
       onInteractiveChange = _ref2.onInteractiveChange,
       className = _ref2.className,
       children = _ref2.children;
+
+  var _useState = useState(false),
+      _useState2 = _slicedToArray(_useState, 2),
+      isVisible = _useState2[0],
+      setIsVisible = _useState2[1];
+
   var setInteractive = useStoreActions(function (actions) {
     return actions.setInteractive;
   });
@@ -11590,6 +11636,14 @@ var Controls = function Controls(_ref2) {
     setInteractive === null || setInteractive === void 0 ? void 0 : setInteractive(!isInteractive);
     onInteractiveChange === null || onInteractiveChange === void 0 ? void 0 : onInteractiveChange(!isInteractive);
   }, [isInteractive, setInteractive, onInteractiveChange]);
+  useEffect(function () {
+    setIsVisible(true);
+  }, []);
+
+  if (!isVisible) {
+    return null;
+  }
+
   return /*#__PURE__*/React__default.createElement("div", {
     className: mapClasses,
     style: style
@@ -11620,8 +11674,8 @@ var createGridLinesPath = function createGridLinesPath(size, strokeWidth, stroke
 };
 var createGridDotsPath = function createGridDotsPath(size, fill) {
   return /*#__PURE__*/React__default.createElement("circle", {
-    cx: size / 2,
-    cy: size / 2,
+    cx: size,
+    cy: size,
     r: size,
     fill: fill
   });
@@ -11640,7 +11694,7 @@ var Background = function Background(_ref) {
       _ref$gap = _ref.gap,
       gap = _ref$gap === void 0 ? 15 : _ref$gap,
       _ref$size = _ref.size,
-      size = _ref$size === void 0 ? 0.5 : _ref$size,
+      size = _ref$size === void 0 ? 0.4 : _ref$size,
       color = _ref.color,
       style = _ref.style,
       className = _ref.className;
@@ -11663,7 +11717,7 @@ var Background = function Background(_ref) {
   var yOffset = y % scaledGap;
   var isLines = variant === BackgroundVariant.Lines;
   var bgColor = color ? color : defaultColors[variant];
-  var path = isLines ? createGridLinesPath(scaledGap, size, bgColor) : createGridDotsPath(size, bgColor);
+  var path = isLines ? createGridLinesPath(scaledGap, size, bgColor) : createGridDotsPath(size * scale, bgColor);
   return /*#__PURE__*/React__default.createElement("svg", {
     className: bgClasses,
     style: _objectSpread(_objectSpread({}, style), {}, {
@@ -11702,5 +11756,5 @@ var ReactFlowProvider = function ReactFlowProvider(_ref) {
 ReactFlowProvider.displayName = 'ReactFlowProvider';
 
 export default ReactFlow;
-export { ArrowHeadType, index as Background, BackgroundVariant, ConnectionLineType, ConnectionMode, ControlButton, index$1 as Controls, EdgeText$1 as EdgeText, Handle$1 as Handle, index$2 as MiniMap, PanOnScrollMode, Position, ReactFlowProvider, addEdge, getBezierPath, getConnectedEdges, getCenter as getEdgeCenter, getIncomers, getMarkerEnd, getOutgoers, getSmoothStepPath, getTransformForBounds, isEdge, isNode, removeElements, updateEdge, useDispatch, useStore, useStoreActions, useStoreState, useTypedSelector, useUpdateNodeInternals, useZoomPanHelper };
+export { ArrowHeadType, index as Background, BackgroundVariant, ConnectionLineType, ConnectionMode, ControlButton, index$1 as Controls, EdgeText$1 as EdgeText, Handle$1 as Handle, index$2 as MiniMap, PanOnScrollMode, Position, ReactFlowProvider, addEdge, getBezierPath, getConnectedEdges, getCenter as getEdgeCenter, getIncomers, getMarkerEnd, getOutgoers, getRectOfNodes, getSmoothStepPath, getTransformForBounds, isEdge, isNode, removeElements, updateEdge, useDispatch, useStore, useStoreActions, useStoreState, useTypedSelector, useUpdateNodeInternals, useZoomPanHelper };
 //# sourceMappingURL=ReactFlow-nocss.esm.js.map

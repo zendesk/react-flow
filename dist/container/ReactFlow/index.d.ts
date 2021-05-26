@@ -67,6 +67,8 @@ export interface ReactFlowProps extends Omit<HTMLAttributes<HTMLDivElement>, 'on
     onEdgeMouseEnter?: (event: MouseEvent, edge: Edge) => void;
     onEdgeMouseMove?: (event: MouseEvent, edge: Edge) => void;
     onEdgeMouseLeave?: (event: MouseEvent, edge: Edge) => void;
+    onEdgeDoubleClick?: (event: MouseEvent, edge: Edge) => void;
+    onEdgeUpdateStart?: (event: MouseEvent, edge: Edge) => void;
     edgeUpdaterRadius?: number;
     nodeTypesId?: string;
     edgeTypesId?: string;

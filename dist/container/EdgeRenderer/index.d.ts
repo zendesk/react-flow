@@ -7,6 +7,7 @@ interface EdgeRendererProps {
     connectionLineComponent?: ConnectionLineComponent;
     connectionMode?: ConnectionMode;
     onElementClick?: (event: React.MouseEvent, element: Node | Edge) => void;
+    onEdgeDoubleClick?: (event: React.MouseEvent, edge: Edge) => void;
     arrowHeadColor: string;
     markerEndId?: string;
     onlyRenderVisibleElements: boolean;
@@ -15,6 +16,7 @@ interface EdgeRendererProps {
     onEdgeMouseEnter?: (event: React.MouseEvent, edge: Edge) => void;
     onEdgeMouseMove?: (event: React.MouseEvent, edge: Edge) => void;
     onEdgeMouseLeave?: (event: React.MouseEvent, edge: Edge) => void;
+    onEdgeUpdateStart?: (event: React.MouseEvent, edge: Edge) => void;
     edgeUpdaterRadius?: number;
 }
 interface EdgeWrapperProps {

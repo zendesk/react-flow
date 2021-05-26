@@ -1,4 +1,4 @@
-import { CSSProperties, MouseEvent as ReactMouseEvent, HTMLAttributes, ReactNode } from 'react';
+import React, { CSSProperties, MouseEvent as ReactMouseEvent, HTMLAttributes, ReactNode } from 'react';
 import { Selection as D3Selection, ZoomBehavior } from 'd3';
 export declare type ElementId = string;
 export declare type FlowElement<T = any> = Node<T> | Edge<T>;
@@ -84,6 +84,7 @@ export interface WrapEdgeProps<T = any> {
     type: string;
     data?: T;
     onClick?: (event: React.MouseEvent, edge: Edge) => void;
+    onEdgeDoubleClick?: (event: React.MouseEvent, edge: Edge) => void;
     selected: boolean;
     animated?: boolean;
     label?: string | ReactNode;
@@ -114,6 +115,7 @@ export interface WrapEdgeProps<T = any> {
     onMouseMove?: (event: React.MouseEvent, edge: Edge) => void;
     onMouseLeave?: (event: React.MouseEvent, edge: Edge) => void;
     edgeUpdaterRadius?: number;
+    onEdgeUpdateStart?: (event: React.MouseEvent, edge: Edge) => void;
 }
 export interface EdgeProps<T = any> {
     id: ElementId;
