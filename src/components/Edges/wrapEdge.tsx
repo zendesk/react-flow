@@ -13,6 +13,7 @@ export default (EdgeComponent: ComponentType<EdgeProps>) => {
     type,
     data,
     onClick,
+    onEdgeDoubleClick,
     selected,
     animated,
     label,
@@ -43,6 +44,7 @@ export default (EdgeComponent: ComponentType<EdgeProps>) => {
     onMouseMove,
     onMouseLeave,
     edgeUpdaterRadius,
+    onEdgeUpdateStart,
   }: WrapEdgeProps): JSX.Element | null => {
     const addSelectedElements = useStoreActions((actions) => actions.addSelectedElements);
     const setConnectionNodeId = useStoreActions((actions) => actions.setConnectionNodeId);
@@ -95,6 +97,13 @@ export default (EdgeComponent: ComponentType<EdgeProps>) => {
       [elementsSelectable, edgeElement, onClick]
     );
 
+    const onEdgeDoubleClickHandler = useCallback(
+      (event: React.MouseEvent<SVGGElement, MouseEvent>) => {
+        onEdgeDoubleClick?.(event, edgeElement);
+      },
+      [edgeElement, onEdgeDoubleClick]
+    );
+
     const onEdgeContextMenu = useCallback(
       (event: React.MouseEvent<SVGGElement, MouseEvent>): void => {
         onContextMenu?.(event, edgeElement);
@@ -130,6 +139,8 @@ export default (EdgeComponent: ComponentType<EdgeProps>) => {
         const isValidConnection = () => true;
         const isTarget = isSourceHandle;
 
+        onEdgeUpdateStart?.(event, edgeElement);
+
         onMouseDown(
           event,
           handleId,
@@ -142,7 +153,7 @@ export default (EdgeComponent: ComponentType<EdgeProps>) => {
           connectionMode
         );
       },
-      [id, source, target, type, sourceHandleId, targetHandleId, setConnectionNodeId, setPosition]
+      [id, source, target, type, sourceHandleId, targetHandleId, setConnectionNodeId, setPosition, edgeElement]
     );
 
     const onEdgeUpdaterSourceMouseDown = useCallback(
@@ -170,20 +181,12 @@ export default (EdgeComponent: ComponentType<EdgeProps>) => {
       <g
         className={edgeClasses}
         onClick={onEdgeClick}
+        onDoubleClick={onEdgeDoubleClickHandler}
         onContextMenu={onEdgeContextMenu}
         onMouseEnter={onEdgeMouseEnter}
         onMouseMove={onEdgeMouseMove}
         onMouseLeave={onEdgeMouseLeave}
       >
-        {handleEdgeUpdate && (
-          <g
-            onMouseDown={onEdgeUpdaterSourceMouseDown}
-            onMouseEnter={onEdgeUpdaterMouseEnter}
-            onMouseOut={onEdgeUpdaterMouseOut}
-          >
-            <EdgeAnchor position={sourcePosition} centerX={sourceX} centerY={sourceY} radius={edgeUpdaterRadius} />
-          </g>
-        )}
         <EdgeComponent
           id={id}
           source={source}
@@ -209,6 +212,15 @@ export default (EdgeComponent: ComponentType<EdgeProps>) => {
           sourceHandleId={sourceHandleId}
           targetHandleId={targetHandleId}
         />
+        {handleEdgeUpdate && (
+          <g
+            onMouseDown={onEdgeUpdaterSourceMouseDown}
+            onMouseEnter={onEdgeUpdaterMouseEnter}
+            onMouseOut={onEdgeUpdaterMouseOut}
+          >
+            <EdgeAnchor position={sourcePosition} centerX={sourceX} centerY={sourceY} radius={edgeUpdaterRadius} />
+          </g>
+        )}
         {handleEdgeUpdate && (
           <g
             onMouseDown={onEdgeUpdaterTargetMouseDown}

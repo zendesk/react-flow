@@ -36,6 +36,7 @@ const GraphView = ({
   onLoad,
   onElementClick,
   onNodeDoubleClick,
+  onEdgeDoubleClick,
   onNodeMouseEnter,
   onNodeMouseMove,
   onNodeMouseLeave,
@@ -91,6 +92,7 @@ const GraphView = ({
   onEdgeMouseMove,
   onEdgeMouseLeave,
   edgeUpdaterRadius,
+  onEdgeUpdateStart,
 }: GraphViewProps) => {
   const isInitialized = useRef<boolean>(false);
   const setOnConnect = useStoreActions((actions) => actions.setOnConnect);
@@ -261,6 +263,7 @@ const GraphView = ({
       <EdgeRenderer
         edgeTypes={edgeTypes}
         onElementClick={onElementClick}
+        onEdgeDoubleClick={onEdgeDoubleClick}
         connectionLineType={connectionLineType}
         connectionLineStyle={connectionLineStyle}
         connectionLineComponent={connectionLineComponent}
@@ -273,6 +276,7 @@ const GraphView = ({
         onEdgeMouseEnter={onEdgeMouseEnter}
         onEdgeMouseMove={onEdgeMouseMove}
         onEdgeMouseLeave={onEdgeMouseLeave}
+        onEdgeUpdateStart={onEdgeUpdateStart}
         edgeUpdaterRadius={edgeUpdaterRadius}
       />
     </FlowRenderer>

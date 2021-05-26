@@ -114,6 +114,8 @@ export interface ReactFlowProps extends Omit<HTMLAttributes<HTMLDivElement>, 'on
   onEdgeMouseEnter?: (event: MouseEvent, edge: Edge) => void;
   onEdgeMouseMove?: (event: MouseEvent, edge: Edge) => void;
   onEdgeMouseLeave?: (event: MouseEvent, edge: Edge) => void;
+  onEdgeDoubleClick?: (event: MouseEvent, edge: Edge) => void;
+  onEdgeUpdateStart?: (event: MouseEvent, edge: Edge) => void;
   edgeUpdaterRadius?: number;
   nodeTypesId?: string;
   edgeTypesId?: string;
@@ -161,7 +163,7 @@ const ReactFlow = forwardRef<ReactFlowRefType, ReactFlowProps>(
       zoomActivationKeyCode = 'Meta',
       snapToGrid = false,
       snapGrid = [15, 15],
-      onlyRenderVisibleElements = true,
+      onlyRenderVisibleElements = false,
       selectNodesOnDrag = true,
       nodesDraggable,
       nodesConnectable,
@@ -187,9 +189,11 @@ const ReactFlow = forwardRef<ReactFlowRefType, ReactFlowProps>(
       children,
       onEdgeUpdate,
       onEdgeContextMenu,
+      onEdgeDoubleClick,
       onEdgeMouseEnter,
       onEdgeMouseMove,
       onEdgeMouseLeave,
+      onEdgeUpdateStart,
       edgeUpdaterRadius = 10,
       nodeTypesId = '1',
       edgeTypesId = '1',
@@ -264,9 +268,11 @@ const ReactFlow = forwardRef<ReactFlowRefType, ReactFlowProps>(
             onSelectionContextMenu={onSelectionContextMenu}
             onEdgeUpdate={onEdgeUpdate}
             onEdgeContextMenu={onEdgeContextMenu}
+            onEdgeDoubleClick={onEdgeDoubleClick}
             onEdgeMouseEnter={onEdgeMouseEnter}
             onEdgeMouseMove={onEdgeMouseMove}
             onEdgeMouseLeave={onEdgeMouseLeave}
+            onEdgeUpdateStart={onEdgeUpdateStart}
             edgeUpdaterRadius={edgeUpdaterRadius}
           />
           <ElementUpdater elements={elements} />

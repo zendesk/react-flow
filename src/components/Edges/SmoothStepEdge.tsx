@@ -83,8 +83,8 @@ export function getSmoothStepPath({
     } else {
       firstCornerPath =
         sourceY <= targetY
-          ? bottomRightCorner(sourceX, targetY, cornerSize)
-          : topRightCorner(sourceX, targetY, cornerSize);
+          ? leftTopCorner(targetX, sourceY, cornerSize)
+          : leftBottomCorner(targetX, sourceY, cornerSize);
     }
     secondCornerPath = '';
   } else if (!leftAndRight.includes(sourcePosition) && leftAndRight.includes(targetPosition)) {

@@ -1,4 +1,14 @@
-import React, { useEffect, useRef, memo, ComponentType, CSSProperties, useMemo, MouseEvent, useCallback } from 'react';
+import React, {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  memo,
+  ComponentType,
+  CSSProperties,
+  useMemo,
+  MouseEvent,
+  useCallback,
+} from 'react';
 import { DraggableCore, DraggableData, DraggableEvent } from 'react-draggable';
 import cc from 'classcat';
 
@@ -39,6 +49,7 @@ export default (NodeComponent: ComponentType<NodeComponentProps>) => {
     isDragging,
     resizeObserver,
   }: WrapNodeProps) => {
+    const observerInitialized = useRef<boolean>(false);
     const updateNodeDimensions = useStoreActions((actions) => actions.updateNodeDimensions);
     const addSelectedElements = useStoreActions((actions) => actions.addSelectedElements);
     const updateNodePosDiff = useStoreActions((actions) => actions.updateNodePosDiff);
@@ -53,11 +64,25 @@ export default (NodeComponent: ComponentType<NodeComponentProps>) => {
       () => ({
         zIndex: selected ? 10 : 3,
         transform: `translate(${xPos}px,${yPos}px)`,
-        pointerEvents: isSelectable || isDraggable || onClick ? 'all' : 'none',
-        opacity: isInitialized ? 1 : 0, // prevents jumping of nodes on start
+        pointerEvents:
+          isSelectable || isDraggable || onClick || onMouseEnter || onMouseMove || onMouseLeave ? 'all' : 'none',
+        // prevents jumping of nodes on start
+        opacity: isInitialized ? 1 : 0,
         ...style,
       }),
-      [selected, xPos, yPos, isSelectable, isDraggable, onClick, isInitialized, style]
+      [
+        selected,
+        xPos,
+        yPos,
+        isSelectable,
+        isDraggable,
+        onClick,
+        isInitialized,
+        style,
+        onMouseEnter,
+        onMouseMove,
+        onMouseLeave,
+      ]
     );
     const onMouseEnterHandler = useMemo(() => {
       if (!onMouseEnter || isDragging) {
@@ -170,25 +195,29 @@ export default (NodeComponent: ComponentType<NodeComponentProps>) => {
       [node, isSelectable, selectNodesOnDrag, onClick, onNodeDragStop, isDragging, selected]
     );
 
-    const onNodeDoubleClickHandler = useCallback((event: MouseEvent) => {
-      onNodeDoubleClick?.(event, node)
-    }, [node, onNodeDoubleClick])
+    const onNodeDoubleClickHandler = useCallback(
+      (event: MouseEvent) => {
+        onNodeDoubleClick?.(event, node);
+      },
+      [node, onNodeDoubleClick]
+    );
 
-    useEffect(() => {
-      if (nodeElement.current && !isHidden) {
+    useLayoutEffect(() => {
+      // the resize observer calls an updateNodeDimensions initially.
+      // We don't need to force another dimension update if it hasn't happened yet
+      if (nodeElement.current && !isHidden && observerInitialized.current) {
         updateNodeDimensions([{ id, nodeElement: nodeElement.current, forceUpdate: true }]);
       }
     }, [id, isHidden, sourcePosition, targetPosition]);
 
     useEffect(() => {
       if (nodeElement.current) {
+        observerInitialized.current = true;
         const currNode = nodeElement.current;
         resizeObserver?.observe(currNode);
 
         return () => resizeObserver?.unobserve(currNode);
       }
-
-      return;
     }, []);
 
     if (isHidden) {
@@ -215,6 +244,7 @@ export default (NodeComponent: ComponentType<NodeComponentProps>) => {
         cancel=".nodrag"
         nodeRef={nodeElement}
         grid={grid}
+        enableUserSelectHack={false}
       >
         <div
           className={nodeClasses}
