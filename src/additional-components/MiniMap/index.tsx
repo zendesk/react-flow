@@ -95,6 +95,7 @@ const MiniMap = ({
         fill={maskColor}
         fillRule="evenodd"
       />
+      <rect x={viewBB.x} y={viewBB.y} width={viewBB.width} height={viewBB.height} stroke="rgb(194, 200, 204)" fill="none" />
     </svg>
   );
 };
