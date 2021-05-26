@@ -1,4 +1,4 @@
-import React, { memo, HTMLAttributes } from 'react';
+import React, { memo, HTMLAttributes, useMemo } from 'react';
 import cc from 'classcat';
 
 import { useStoreState } from '../../store/hooks';
@@ -66,6 +66,27 @@ const MiniMap = ({
   const height = viewHeight + offset * 2;
   const shapeRendering = (typeof window === "undefined" || !!window.chrome) ?  "crispEdges" : "geometricPrecision";
 
+  const nodesToRender = useMemo(() =>
+    nodes
+      .filter((node) => !node.isHidden)
+      .map((node) => (
+        <MiniMapNode
+          key={node.id}
+          x={node.__rf.position.x}
+          y={node.__rf.position.y}
+          width={node.__rf.width}
+          height={node.__rf.height}
+          style={node.style}
+          className={nodeClassNameFunc(node)}
+          color={nodeColorFunc(node)}
+          borderRadius={nodeBorderRadius}
+          strokeColor={nodeStrokeColorFunc(node)}
+          strokeWidth={nodeStrokeWidth}
+          shapeRendering={shapeRendering}
+        />
+      ))
+  , [nodes, shapeRendering, nodeStrokeWidth, nodeBorderRadius])
+
   return (
     <svg
       width={elementWidth}
@@ -74,24 +95,7 @@ const MiniMap = ({
       style={style}
       className={mapClasses}
     >
-      {nodes
-        .filter((node) => !node.isHidden)
-        .map((node) => (
-          <MiniMapNode
-            key={node.id}
-            x={node.__rf.position.x}
-            y={node.__rf.position.y}
-            width={node.__rf.width}
-            height={node.__rf.height}
-            style={node.style}
-            className={nodeClassNameFunc(node)}
-            color={nodeColorFunc(node)}
-            borderRadius={nodeBorderRadius}
-            strokeColor={nodeStrokeColorFunc(node)}
-            strokeWidth={nodeStrokeWidth}
-            shapeRendering={shapeRendering}
-          />
-        ))}
+      {nodesToRender}
       <path
         className="react-flow__minimap-mask"
         d={`M${x - offset},${y - offset}h${width + offset * 2}v${height + offset * 2}h${-width - offset * 2}z
