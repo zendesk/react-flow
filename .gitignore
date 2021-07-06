@@ -7,3 +7,4 @@ cypress/screenshots
 .env
 stats.html
 .eslintcache
+.idea

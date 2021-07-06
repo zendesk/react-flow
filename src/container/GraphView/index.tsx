@@ -73,6 +73,7 @@ const GraphView = ({
   defaultZoom,
   defaultPosition,
   translateExtent,
+  preventScrolling,
   nodeExtent,
   arrowHeadColor,
   markerEndId,
@@ -93,6 +94,7 @@ const GraphView = ({
   onEdgeMouseLeave,
   edgeUpdaterRadius,
   onEdgeUpdateStart,
+  onEdgeUpdateEnd,
 }: GraphViewProps) => {
   const isInitialized = useRef<boolean>(false);
   const setOnConnect = useStoreActions((actions) => actions.setOnConnect);
@@ -243,6 +245,7 @@ const GraphView = ({
       onSelectionDrag={onSelectionDrag}
       onSelectionDragStop={onSelectionDragStop}
       onSelectionContextMenu={onSelectionContextMenu}
+      preventScrolling={preventScrolling}
     >
       <NodeRenderer
         nodeTypes={nodeTypes}
@@ -277,6 +280,7 @@ const GraphView = ({
         onEdgeMouseMove={onEdgeMouseMove}
         onEdgeMouseLeave={onEdgeMouseLeave}
         onEdgeUpdateStart={onEdgeUpdateStart}
+        onEdgeUpdateEnd={onEdgeUpdateEnd}
         edgeUpdaterRadius={edgeUpdaterRadius}
       />
     </FlowRenderer>
