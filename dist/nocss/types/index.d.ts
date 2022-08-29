@@ -116,6 +116,7 @@ export interface WrapEdgeProps<T = any> {
     onMouseLeave?: (event: React.MouseEvent, edge: Edge) => void;
     edgeUpdaterRadius?: number;
     onEdgeUpdateStart?: (event: React.MouseEvent, edge: Edge) => void;
+    onEdgeUpdateEnd?: (event: MouseEvent, edge: Edge) => void;
 }
 export interface EdgeProps<T = any> {
     id: ElementId;
@@ -225,6 +226,8 @@ export interface WrapNodeProps<T = any> {
 export declare type FitViewParams = {
     padding?: number;
     includeHiddenNodes?: boolean;
+    minZoom?: number;
+    maxZoom?: number;
 };
 export declare type FlowExportObject<T = any> = {
     elements: Elements<T>;

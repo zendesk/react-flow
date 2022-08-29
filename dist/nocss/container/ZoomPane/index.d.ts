@@ -17,7 +17,8 @@ interface ZoomPaneProps {
     onMoveStart?: (flowTransform?: FlowTransform) => void;
     onMoveEnd?: (flowTransform?: FlowTransform) => void;
     zoomActivationKeyCode?: KeyCode;
+    preventScrolling?: boolean;
     children: ReactNode;
 }
-declare const ZoomPane: ({ onMove, onMoveStart, onMoveEnd, zoomOnScroll, zoomOnPinch, panOnScroll, panOnScrollSpeed, panOnScrollMode, zoomOnDoubleClick, selectionKeyPressed, elementsSelectable, paneMoveable, defaultPosition, defaultZoom, translateExtent, zoomActivationKeyCode, children, }: ZoomPaneProps) => JSX.Element;
+declare const ZoomPane: ({ onMove, onMoveStart, onMoveEnd, zoomOnScroll, zoomOnPinch, panOnScroll, panOnScrollSpeed, panOnScrollMode, zoomOnDoubleClick, selectionKeyPressed, elementsSelectable, paneMoveable, defaultPosition, defaultZoom, translateExtent, zoomActivationKeyCode, preventScrolling, children, }: ZoomPaneProps) => JSX.Element;
 export default ZoomPane;

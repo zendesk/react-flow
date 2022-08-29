@@ -84,6 +84,8 @@ const ZoomPane = ({
       const d3ZoomInstance = zoom().scaleExtent([state.minZoom, state.maxZoom]).translateExtent(currentTranslateExtent);
       const selection = select(zoomPane.current as Element).call(d3ZoomInstance);
 
+      d3ZoomInstance.clickDistance(40);
+
       const clampedX = clamp(defaultPosition[0], currentTranslateExtent[0][0], currentTranslateExtent[1][0]);
       const clampedY = clamp(defaultPosition[1], currentTranslateExtent[0][1], currentTranslateExtent[1][1]);
       const clampedZoom = clamp(defaultZoom, state.minZoom, state.maxZoom);

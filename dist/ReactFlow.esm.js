@@ -1,6 +1,21 @@
-import * as React from 'react';
+import * as React$1 from 'react';
 import React__default, { useLayoutEffect, useEffect, useMemo, useContext, useDebugValue, useReducer, useRef, useState, memo, useCallback, createContext, forwardRef } from 'react';
 import require$$2, { unstable_batchedUpdates } from 'react-dom';
+
+function _defineProperty$2(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, {
+      value: value,
+      enumerable: true,
+      configurable: true,
+      writable: true
+    });
+  } else {
+    obj[key] = value;
+  }
+
+  return obj;
+}
 
 function _objectWithoutPropertiesLoose(source, excluded) {
   if (source == null) return {};
@@ -56,41 +71,21 @@ function cc(names) {
   return out
 }
 
-function symbolObservablePonyfill(root) {
-	var result;
-	var Symbol = root.Symbol;
-
-	if (typeof Symbol === 'function') {
-		if (Symbol.observable) {
-			result = Symbol.observable;
-		} else {
-			result = Symbol('observable');
-			Symbol.observable = result;
-		}
-	} else {
-		result = '@@observable';
-	}
-
-	return result;
+/**
+ * Adapted from React: https://github.com/facebook/react/blob/master/packages/shared/formatProdErrorMessage.js
+ *
+ * Do not require this module directly! Use normal throw error calls. These messages will be replaced with error codes
+ * during build.
+ * @param {number} code
+ */
+function formatProdErrorMessage(code) {
+  return "Minified Redux error #" + code + "; visit https://redux.js.org/Errors?code=" + code + " for the full message or " + 'use the non-minified dev environment for full errors. ';
 }
 
-/* global window */
-
-var root$1;
-
-if (typeof self !== 'undefined') {
-  root$1 = self;
-} else if (typeof window !== 'undefined') {
-  root$1 = window;
-} else if (typeof global !== 'undefined') {
-  root$1 = global;
-} else if (typeof module !== 'undefined') {
-  root$1 = module;
-} else {
-  root$1 = Function('return this')();
-}
-
-var result = symbolObservablePonyfill(root$1);
+// Inlined version of the `symbol-observable` polyfill
+var $$observable = (function () {
+  return typeof Symbol === 'function' && Symbol.observable || '@@observable';
+})();
 
 /**
  * These are private action types reserved by Redux.
@@ -125,6 +120,65 @@ function isPlainObject(obj) {
   return Object.getPrototypeOf(obj) === proto;
 }
 
+function kindOf(val) {
+  var typeOfVal = typeof val;
+
+  if (process.env.NODE_ENV !== 'production') {
+    // Inlined / shortened version of `kindOf` from https://github.com/jonschlinkert/kind-of
+    function miniKindOf(val) {
+      if (val === void 0) return 'undefined';
+      if (val === null) return 'null';
+      var type = typeof val;
+
+      switch (type) {
+        case 'boolean':
+        case 'string':
+        case 'number':
+        case 'symbol':
+        case 'function':
+          {
+            return type;
+          }
+      }
+
+      if (Array.isArray(val)) return 'array';
+      if (isDate(val)) return 'date';
+      if (isError(val)) return 'error';
+      var constructorName = ctorName(val);
+
+      switch (constructorName) {
+        case 'Symbol':
+        case 'Promise':
+        case 'WeakMap':
+        case 'WeakSet':
+        case 'Map':
+        case 'Set':
+          return constructorName;
+      } // other
+
+
+      return type.slice(8, -1).toLowerCase().replace(/\s/g, '');
+    }
+
+    function ctorName(val) {
+      return typeof val.constructor === 'function' ? val.constructor.name : null;
+    }
+
+    function isError(val) {
+      return val instanceof Error || typeof val.message === 'string' && val.constructor && typeof val.constructor.stackTraceLimit === 'number';
+    }
+
+    function isDate(val) {
+      if (val instanceof Date) return true;
+      return typeof val.toDateString === 'function' && typeof val.getDate === 'function' && typeof val.setDate === 'function';
+    }
+
+    typeOfVal = miniKindOf(val);
+  }
+
+  return typeOfVal;
+}
+
 /**
  * Creates a Redux store that holds the state tree.
  * The only way to change the data in the store is to call `dispatch()` on it.
@@ -155,7 +209,7 @@ function createStore(reducer, preloadedState, enhancer) {
   var _ref2;
 
   if (typeof preloadedState === 'function' && typeof enhancer === 'function' || typeof enhancer === 'function' && typeof arguments[3] === 'function') {
-    throw new Error('It looks like you are passing several store enhancers to ' + 'createStore(). This is not supported. Instead, compose them ' + 'together to a single function.');
+    throw new Error(process.env.NODE_ENV === "production" ? formatProdErrorMessage(0) : 'It looks like you are passing several store enhancers to ' + 'createStore(). This is not supported. Instead, compose them ' + 'together to a single function. See https://redux.js.org/tutorials/fundamentals/part-4-store#creating-a-store-with-enhancers for an example.');
   }
 
   if (typeof preloadedState === 'function' && typeof enhancer === 'undefined') {
@@ -165,14 +219,14 @@ function createStore(reducer, preloadedState, enhancer) {
 
   if (typeof enhancer !== 'undefined') {
     if (typeof enhancer !== 'function') {
-      throw new Error('Expected the enhancer to be a function.');
+      throw new Error(process.env.NODE_ENV === "production" ? formatProdErrorMessage(1) : "Expected the enhancer to be a function. Instead, received: '" + kindOf(enhancer) + "'");
     }
 
     return enhancer(createStore)(reducer, preloadedState);
   }
 
   if (typeof reducer !== 'function') {
-    throw new Error('Expected the reducer to be a function.');
+    throw new Error(process.env.NODE_ENV === "production" ? formatProdErrorMessage(2) : "Expected the root reducer to be a function. Instead, received: '" + kindOf(reducer) + "'");
   }
 
   var currentReducer = reducer;
@@ -202,7 +256,7 @@ function createStore(reducer, preloadedState, enhancer) {
 
   function getState() {
     if (isDispatching) {
-      throw new Error('You may not call store.getState() while the reducer is executing. ' + 'The reducer has already received the state as an argument. ' + 'Pass it down from the top reducer instead of reading it from the store.');
+      throw new Error(process.env.NODE_ENV === "production" ? formatProdErrorMessage(3) : 'You may not call store.getState() while the reducer is executing. ' + 'The reducer has already received the state as an argument. ' + 'Pass it down from the top reducer instead of reading it from the store.');
     }
 
     return currentState;
@@ -234,11 +288,11 @@ function createStore(reducer, preloadedState, enhancer) {
 
   function subscribe(listener) {
     if (typeof listener !== 'function') {
-      throw new Error('Expected the listener to be a function.');
+      throw new Error(process.env.NODE_ENV === "production" ? formatProdErrorMessage(4) : "Expected the listener to be a function. Instead, received: '" + kindOf(listener) + "'");
     }
 
     if (isDispatching) {
-      throw new Error('You may not call store.subscribe() while the reducer is executing. ' + 'If you would like to be notified after the store has been updated, subscribe from a ' + 'component and invoke store.getState() in the callback to access the latest state. ' + 'See https://redux.js.org/api-reference/store#subscribelistener for more details.');
+      throw new Error(process.env.NODE_ENV === "production" ? formatProdErrorMessage(5) : 'You may not call store.subscribe() while the reducer is executing. ' + 'If you would like to be notified after the store has been updated, subscribe from a ' + 'component and invoke store.getState() in the callback to access the latest state. ' + 'See https://redux.js.org/api/store#subscribelistener for more details.');
     }
 
     var isSubscribed = true;
@@ -250,7 +304,7 @@ function createStore(reducer, preloadedState, enhancer) {
       }
 
       if (isDispatching) {
-        throw new Error('You may not unsubscribe from a store listener while the reducer is executing. ' + 'See https://redux.js.org/api-reference/store#subscribelistener for more details.');
+        throw new Error(process.env.NODE_ENV === "production" ? formatProdErrorMessage(6) : 'You may not unsubscribe from a store listener while the reducer is executing. ' + 'See https://redux.js.org/api/store#subscribelistener for more details.');
       }
 
       isSubscribed = false;
@@ -289,15 +343,15 @@ function createStore(reducer, preloadedState, enhancer) {
 
   function dispatch(action) {
     if (!isPlainObject(action)) {
-      throw new Error('Actions must be plain objects. ' + 'Use custom middleware for async actions.');
+      throw new Error(process.env.NODE_ENV === "production" ? formatProdErrorMessage(7) : "Actions must be plain objects. Instead, the actual type was: '" + kindOf(action) + "'. You may need to add middleware to your store setup to handle dispatching other values, such as 'redux-thunk' to handle dispatching functions. See https://redux.js.org/tutorials/fundamentals/part-4-store#middleware and https://redux.js.org/tutorials/fundamentals/part-6-async-logic#using-the-redux-thunk-middleware for examples.");
     }
 
     if (typeof action.type === 'undefined') {
-      throw new Error('Actions may not have an undefined "type" property. ' + 'Have you misspelled a constant?');
+      throw new Error(process.env.NODE_ENV === "production" ? formatProdErrorMessage(8) : 'Actions may not have an undefined "type" property. You may have misspelled an action type string constant.');
     }
 
     if (isDispatching) {
-      throw new Error('Reducers may not dispatch actions.');
+      throw new Error(process.env.NODE_ENV === "production" ? formatProdErrorMessage(9) : 'Reducers may not dispatch actions.');
     }
 
     try {
@@ -330,7 +384,7 @@ function createStore(reducer, preloadedState, enhancer) {
 
   function replaceReducer(nextReducer) {
     if (typeof nextReducer !== 'function') {
-      throw new Error('Expected the nextReducer to be a function.');
+      throw new Error(process.env.NODE_ENV === "production" ? formatProdErrorMessage(10) : "Expected the nextReducer to be a function. Instead, received: '" + kindOf(nextReducer));
     }
 
     currentReducer = nextReducer; // This action has a similiar effect to ActionTypes.INIT.
@@ -365,7 +419,7 @@ function createStore(reducer, preloadedState, enhancer) {
        */
       subscribe: function subscribe(observer) {
         if (typeof observer !== 'object' || observer === null) {
-          throw new TypeError('Expected the observer to be an object.');
+          throw new Error(process.env.NODE_ENV === "production" ? formatProdErrorMessage(11) : "Expected the observer to be an object. Instead, received: '" + kindOf(observer) + "'");
         }
 
         function observeState() {
@@ -380,7 +434,7 @@ function createStore(reducer, preloadedState, enhancer) {
           unsubscribe: unsubscribe
         };
       }
-    }, _ref[result] = function () {
+    }, _ref[$$observable] = function () {
       return this;
     }, _ref;
   } // When a store is created, an "INIT" action is dispatched so that every
@@ -396,7 +450,7 @@ function createStore(reducer, preloadedState, enhancer) {
     subscribe: subscribe,
     getState: getState,
     replaceReducer: replaceReducer
-  }, _ref2[result] = observable, _ref2;
+  }, _ref2[$$observable] = observable, _ref2;
 }
 
 /**
@@ -456,7 +510,7 @@ function bindActionCreators(actionCreators, dispatch) {
   }
 
   if (typeof actionCreators !== 'object' || actionCreators === null) {
-    throw new Error("bindActionCreators expected an object or a function, instead received " + (actionCreators === null ? 'null' : typeof actionCreators) + ". " + "Did you write \"import ActionCreators from\" instead of \"import * as ActionCreators from\"?");
+    throw new Error(process.env.NODE_ENV === "production" ? formatProdErrorMessage(16) : "bindActionCreators expected an object or a function, but instead received: '" + kindOf(actionCreators) + "'. " + "Did you write \"import ActionCreators from\" instead of \"import * as ActionCreators from\"?");
   }
 
   var boundActionCreators = {};
@@ -483,10 +537,11 @@ if (process.env.NODE_ENV !== 'production' && typeof isCrushed.name === 'string' 
   warning('You are currently using minified code outside of NODE_ENV === "production". ' + 'This means that you are running a slower development build of Redux. ' + 'You can use loose-envify (https://github.com/zertosh/loose-envify) for browserify ' + 'or setting mode to production in webpack (https://webpack.js.org/concepts/mode/) ' + 'to ensure you have the correct code for your production build.');
 }
 
-function createCommonjsModule(fn) {
-  var module = { exports: {} };
-	return fn(module, module.exports), module.exports;
-}
+var propTypes = {exports: {}};
+
+var reactIs$1 = {exports: {}};
+
+var reactIs_production_min = {};
 
 /** @license React v16.13.1
  * react-is.production.min.js
@@ -498,41 +553,12 @@ function createCommonjsModule(fn) {
  */
 var b="function"===typeof Symbol&&Symbol.for,c=b?Symbol.for("react.element"):60103,d=b?Symbol.for("react.portal"):60106,e=b?Symbol.for("react.fragment"):60107,f=b?Symbol.for("react.strict_mode"):60108,g=b?Symbol.for("react.profiler"):60114,h=b?Symbol.for("react.provider"):60109,k=b?Symbol.for("react.context"):60110,l=b?Symbol.for("react.async_mode"):60111,m=b?Symbol.for("react.concurrent_mode"):60111,n=b?Symbol.for("react.forward_ref"):60112,p=b?Symbol.for("react.suspense"):60113,q=b?
 Symbol.for("react.suspense_list"):60120,r=b?Symbol.for("react.memo"):60115,t=b?Symbol.for("react.lazy"):60116,v=b?Symbol.for("react.block"):60121,w=b?Symbol.for("react.fundamental"):60117,x=b?Symbol.for("react.responder"):60118,y=b?Symbol.for("react.scope"):60119;
-function z(a){if("object"===typeof a&&null!==a){var u=a.$$typeof;switch(u){case c:switch(a=a.type,a){case l:case m:case e:case g:case f:case p:return a;default:switch(a=a&&a.$$typeof,a){case k:case n:case t:case r:case h:return a;default:return u}}case d:return u}}}function A(a){return z(a)===m}var AsyncMode=l;var ConcurrentMode=m;var ContextConsumer=k;var ContextProvider=h;var Element=c;var ForwardRef=n;var Fragment=e;var Lazy=t;var Memo=r;var Portal=d;
-var Profiler=g;var StrictMode=f;var Suspense=p;var isAsyncMode=function(a){return A(a)||z(a)===l};var isConcurrentMode=A;var isContextConsumer=function(a){return z(a)===k};var isContextProvider=function(a){return z(a)===h};var isElement=function(a){return "object"===typeof a&&null!==a&&a.$$typeof===c};var isForwardRef=function(a){return z(a)===n};var isFragment=function(a){return z(a)===e};var isLazy=function(a){return z(a)===t};
-var isMemo=function(a){return z(a)===r};var isPortal=function(a){return z(a)===d};var isProfiler=function(a){return z(a)===g};var isStrictMode=function(a){return z(a)===f};var isSuspense=function(a){return z(a)===p};
-var isValidElementType=function(a){return "string"===typeof a||"function"===typeof a||a===e||a===m||a===g||a===f||a===p||a===q||"object"===typeof a&&null!==a&&(a.$$typeof===t||a.$$typeof===r||a.$$typeof===h||a.$$typeof===k||a.$$typeof===n||a.$$typeof===w||a.$$typeof===x||a.$$typeof===y||a.$$typeof===v)};var typeOf=z;
+function z(a){if("object"===typeof a&&null!==a){var u=a.$$typeof;switch(u){case c:switch(a=a.type,a){case l:case m:case e:case g:case f:case p:return a;default:switch(a=a&&a.$$typeof,a){case k:case n:case t:case r:case h:return a;default:return u}}case d:return u}}}function A(a){return z(a)===m}reactIs_production_min.AsyncMode=l;reactIs_production_min.ConcurrentMode=m;reactIs_production_min.ContextConsumer=k;reactIs_production_min.ContextProvider=h;reactIs_production_min.Element=c;reactIs_production_min.ForwardRef=n;reactIs_production_min.Fragment=e;reactIs_production_min.Lazy=t;reactIs_production_min.Memo=r;reactIs_production_min.Portal=d;
+reactIs_production_min.Profiler=g;reactIs_production_min.StrictMode=f;reactIs_production_min.Suspense=p;reactIs_production_min.isAsyncMode=function(a){return A(a)||z(a)===l};reactIs_production_min.isConcurrentMode=A;reactIs_production_min.isContextConsumer=function(a){return z(a)===k};reactIs_production_min.isContextProvider=function(a){return z(a)===h};reactIs_production_min.isElement=function(a){return "object"===typeof a&&null!==a&&a.$$typeof===c};reactIs_production_min.isForwardRef=function(a){return z(a)===n};reactIs_production_min.isFragment=function(a){return z(a)===e};reactIs_production_min.isLazy=function(a){return z(a)===t};
+reactIs_production_min.isMemo=function(a){return z(a)===r};reactIs_production_min.isPortal=function(a){return z(a)===d};reactIs_production_min.isProfiler=function(a){return z(a)===g};reactIs_production_min.isStrictMode=function(a){return z(a)===f};reactIs_production_min.isSuspense=function(a){return z(a)===p};
+reactIs_production_min.isValidElementType=function(a){return "string"===typeof a||"function"===typeof a||a===e||a===m||a===g||a===f||a===p||a===q||"object"===typeof a&&null!==a&&(a.$$typeof===t||a.$$typeof===r||a.$$typeof===h||a.$$typeof===k||a.$$typeof===n||a.$$typeof===w||a.$$typeof===x||a.$$typeof===y||a.$$typeof===v)};reactIs_production_min.typeOf=z;
 
-var reactIs_production_min = {
-	AsyncMode: AsyncMode,
-	ConcurrentMode: ConcurrentMode,
-	ContextConsumer: ContextConsumer,
-	ContextProvider: ContextProvider,
-	Element: Element,
-	ForwardRef: ForwardRef,
-	Fragment: Fragment,
-	Lazy: Lazy,
-	Memo: Memo,
-	Portal: Portal,
-	Profiler: Profiler,
-	StrictMode: StrictMode,
-	Suspense: Suspense,
-	isAsyncMode: isAsyncMode,
-	isConcurrentMode: isConcurrentMode,
-	isContextConsumer: isContextConsumer,
-	isContextProvider: isContextProvider,
-	isElement: isElement,
-	isForwardRef: isForwardRef,
-	isFragment: isFragment,
-	isLazy: isLazy,
-	isMemo: isMemo,
-	isPortal: isPortal,
-	isProfiler: isProfiler,
-	isStrictMode: isStrictMode,
-	isSuspense: isSuspense,
-	isValidElementType: isValidElementType,
-	typeOf: typeOf
-};
+var reactIs_development = {};
 
 /** @license React v16.13.1
  * react-is.development.js
@@ -542,8 +568,6 @@ var reactIs_production_min = {
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-
-var reactIs_development = createCommonjsModule(function (module, exports) {
 
 
 
@@ -684,46 +708,42 @@ function isSuspense(object) {
   return typeOf(object) === REACT_SUSPENSE_TYPE;
 }
 
-exports.AsyncMode = AsyncMode;
-exports.ConcurrentMode = ConcurrentMode;
-exports.ContextConsumer = ContextConsumer;
-exports.ContextProvider = ContextProvider;
-exports.Element = Element;
-exports.ForwardRef = ForwardRef;
-exports.Fragment = Fragment;
-exports.Lazy = Lazy;
-exports.Memo = Memo;
-exports.Portal = Portal;
-exports.Profiler = Profiler;
-exports.StrictMode = StrictMode;
-exports.Suspense = Suspense;
-exports.isAsyncMode = isAsyncMode;
-exports.isConcurrentMode = isConcurrentMode;
-exports.isContextConsumer = isContextConsumer;
-exports.isContextProvider = isContextProvider;
-exports.isElement = isElement;
-exports.isForwardRef = isForwardRef;
-exports.isFragment = isFragment;
-exports.isLazy = isLazy;
-exports.isMemo = isMemo;
-exports.isPortal = isPortal;
-exports.isProfiler = isProfiler;
-exports.isStrictMode = isStrictMode;
-exports.isSuspense = isSuspense;
-exports.isValidElementType = isValidElementType;
-exports.typeOf = typeOf;
+reactIs_development.AsyncMode = AsyncMode;
+reactIs_development.ConcurrentMode = ConcurrentMode;
+reactIs_development.ContextConsumer = ContextConsumer;
+reactIs_development.ContextProvider = ContextProvider;
+reactIs_development.Element = Element;
+reactIs_development.ForwardRef = ForwardRef;
+reactIs_development.Fragment = Fragment;
+reactIs_development.Lazy = Lazy;
+reactIs_development.Memo = Memo;
+reactIs_development.Portal = Portal;
+reactIs_development.Profiler = Profiler;
+reactIs_development.StrictMode = StrictMode;
+reactIs_development.Suspense = Suspense;
+reactIs_development.isAsyncMode = isAsyncMode;
+reactIs_development.isConcurrentMode = isConcurrentMode;
+reactIs_development.isContextConsumer = isContextConsumer;
+reactIs_development.isContextProvider = isContextProvider;
+reactIs_development.isElement = isElement;
+reactIs_development.isForwardRef = isForwardRef;
+reactIs_development.isFragment = isFragment;
+reactIs_development.isLazy = isLazy;
+reactIs_development.isMemo = isMemo;
+reactIs_development.isPortal = isPortal;
+reactIs_development.isProfiler = isProfiler;
+reactIs_development.isStrictMode = isStrictMode;
+reactIs_development.isSuspense = isSuspense;
+reactIs_development.isValidElementType = isValidElementType;
+reactIs_development.typeOf = typeOf;
   })();
 }
-});
-
-var reactIs = createCommonjsModule(function (module) {
 
 if (process.env.NODE_ENV === 'production') {
-  module.exports = reactIs_production_min;
+  reactIs$1.exports = reactIs_production_min;
 } else {
-  module.exports = reactIs_development;
+  reactIs$1.exports = reactIs_development;
 }
-});
 
 /*
 object-assign
@@ -821,9 +841,9 @@ var objectAssign = shouldUseNative() ? Object.assign : function (target, source)
  * LICENSE file in the root directory of this source tree.
  */
 
-var ReactPropTypesSecret$1 = 'SECRET_DO_NOT_PASS_THIS_OR_YOU_WILL_BE_FIRED';
+var ReactPropTypesSecret$3 = 'SECRET_DO_NOT_PASS_THIS_OR_YOU_WILL_BE_FIRED';
 
-var ReactPropTypesSecret_1 = ReactPropTypesSecret$1;
+var ReactPropTypesSecret_1 = ReactPropTypesSecret$3;
 
 /**
  * Copyright (c) 2013-present, Facebook, Inc.
@@ -835,7 +855,7 @@ var ReactPropTypesSecret_1 = ReactPropTypesSecret$1;
 var printWarning$1 = function() {};
 
 if (process.env.NODE_ENV !== 'production') {
-  var ReactPropTypesSecret = ReactPropTypesSecret_1;
+  var ReactPropTypesSecret$2 = ReactPropTypesSecret_1;
   var loggedTypeFailures = {};
   var has$1 = Function.call.bind(Object.prototype.hasOwnProperty);
 
@@ -864,7 +884,7 @@ if (process.env.NODE_ENV !== 'production') {
  * @param {?Function} getStack Returns the component stack.
  * @private
  */
-function checkPropTypes(typeSpecs, values, location, componentName, getStack) {
+function checkPropTypes$1(typeSpecs, values, location, componentName, getStack) {
   if (process.env.NODE_ENV !== 'production') {
     for (var typeSpecName in typeSpecs) {
       if (has$1(typeSpecs, typeSpecName)) {
@@ -883,7 +903,7 @@ function checkPropTypes(typeSpecs, values, location, componentName, getStack) {
             err.name = 'Invariant Violation';
             throw err;
           }
-          error = typeSpecs[typeSpecName](values, typeSpecName, componentName, location, null, ReactPropTypesSecret);
+          error = typeSpecs[typeSpecName](values, typeSpecName, componentName, location, null, ReactPropTypesSecret$2);
         } catch (ex) {
           error = ex;
         }
@@ -918,13 +938,13 @@ function checkPropTypes(typeSpecs, values, location, componentName, getStack) {
  *
  * @private
  */
-checkPropTypes.resetWarningCache = function() {
+checkPropTypes$1.resetWarningCache = function() {
   if (process.env.NODE_ENV !== 'production') {
     loggedTypeFailures = {};
   }
 };
 
-var checkPropTypes_1 = checkPropTypes;
+var checkPropTypes_1 = checkPropTypes$1;
 
 /**
  * Copyright (c) 2013-present, Facebook, Inc.
@@ -933,11 +953,11 @@ var checkPropTypes_1 = checkPropTypes;
  * LICENSE file in the root directory of this source tree.
  */
 
+var ReactIs$1 = reactIs$1.exports;
+var assign = objectAssign;
 
-
-
-
-
+var ReactPropTypesSecret$1 = ReactPropTypesSecret_1;
+var checkPropTypes = checkPropTypes_1;
 
 var has = Function.call.bind(Object.prototype.hasOwnProperty);
 var printWarning = function() {};
@@ -1101,7 +1121,7 @@ var factoryWithTypeCheckers = function(isValidElement, throwOnDirectAccess) {
       componentName = componentName || ANONYMOUS;
       propFullName = propFullName || propName;
 
-      if (secret !== ReactPropTypesSecret_1) {
+      if (secret !== ReactPropTypesSecret$1) {
         if (throwOnDirectAccess) {
           // New behavior only for users of `prop-types` package
           var err = new Error(
@@ -1182,7 +1202,7 @@ var factoryWithTypeCheckers = function(isValidElement, throwOnDirectAccess) {
         return new PropTypeError('Invalid ' + location + ' `' + propFullName + '` of type ' + ('`' + propType + '` supplied to `' + componentName + '`, expected an array.'));
       }
       for (var i = 0; i < propValue.length; i++) {
-        var error = typeChecker(propValue, i, componentName, location, propFullName + '[' + i + ']', ReactPropTypesSecret_1);
+        var error = typeChecker(propValue, i, componentName, location, propFullName + '[' + i + ']', ReactPropTypesSecret$1);
         if (error instanceof Error) {
           return error;
         }
@@ -1207,7 +1227,7 @@ var factoryWithTypeCheckers = function(isValidElement, throwOnDirectAccess) {
   function createElementTypeTypeChecker() {
     function validate(props, propName, componentName, location, propFullName) {
       var propValue = props[propName];
-      if (!reactIs.isValidElementType(propValue)) {
+      if (!ReactIs$1.isValidElementType(propValue)) {
         var propType = getPropType(propValue);
         return new PropTypeError('Invalid ' + location + ' `' + propFullName + '` of type ' + ('`' + propType + '` supplied to `' + componentName + '`, expected a single ReactElement type.'));
       }
@@ -1275,7 +1295,7 @@ var factoryWithTypeCheckers = function(isValidElement, throwOnDirectAccess) {
       }
       for (var key in propValue) {
         if (has(propValue, key)) {
-          var error = typeChecker(propValue, key, componentName, location, propFullName + '.' + key, ReactPropTypesSecret_1);
+          var error = typeChecker(propValue, key, componentName, location, propFullName + '.' + key, ReactPropTypesSecret$1);
           if (error instanceof Error) {
             return error;
           }
@@ -1306,7 +1326,7 @@ var factoryWithTypeCheckers = function(isValidElement, throwOnDirectAccess) {
     function validate(props, propName, componentName, location, propFullName) {
       for (var i = 0; i < arrayOfTypeCheckers.length; i++) {
         var checker = arrayOfTypeCheckers[i];
-        if (checker(props, propName, componentName, location, propFullName, ReactPropTypesSecret_1) == null) {
+        if (checker(props, propName, componentName, location, propFullName, ReactPropTypesSecret$1) == null) {
           return null;
         }
       }
@@ -1338,7 +1358,7 @@ var factoryWithTypeCheckers = function(isValidElement, throwOnDirectAccess) {
         if (!checker) {
           continue;
         }
-        var error = checker(propValue, key, componentName, location, propFullName + '.' + key, ReactPropTypesSecret_1);
+        var error = checker(propValue, key, componentName, location, propFullName + '.' + key, ReactPropTypesSecret$1);
         if (error) {
           return error;
         }
@@ -1357,7 +1377,7 @@ var factoryWithTypeCheckers = function(isValidElement, throwOnDirectAccess) {
       }
       // We need to check all keys in case some are required but missing from
       // props.
-      var allKeys = objectAssign({}, props[propName], shapeTypes);
+      var allKeys = assign({}, props[propName], shapeTypes);
       for (var key in allKeys) {
         var checker = shapeTypes[key];
         if (!checker) {
@@ -1367,7 +1387,7 @@ var factoryWithTypeCheckers = function(isValidElement, throwOnDirectAccess) {
             '\nValid keys: ' +  JSON.stringify(Object.keys(shapeTypes), null, '  ')
           );
         }
-        var error = checker(propValue, key, componentName, location, propFullName + '.' + key, ReactPropTypesSecret_1);
+        var error = checker(propValue, key, componentName, location, propFullName + '.' + key, ReactPropTypesSecret$1);
         if (error) {
           return error;
         }
@@ -1509,8 +1529,8 @@ var factoryWithTypeCheckers = function(isValidElement, throwOnDirectAccess) {
     return propValue.constructor.name;
   }
 
-  ReactPropTypes.checkPropTypes = checkPropTypes_1;
-  ReactPropTypes.resetWarningCache = checkPropTypes_1.resetWarningCache;
+  ReactPropTypes.checkPropTypes = checkPropTypes;
+  ReactPropTypes.resetWarningCache = checkPropTypes.resetWarningCache;
   ReactPropTypes.PropTypes = ReactPropTypes;
 
   return ReactPropTypes;
@@ -1523,7 +1543,7 @@ var factoryWithTypeCheckers = function(isValidElement, throwOnDirectAccess) {
  * LICENSE file in the root directory of this source tree.
  */
 
-
+var ReactPropTypesSecret = ReactPropTypesSecret_1;
 
 function emptyFunction() {}
 function emptyFunctionWithReset() {}
@@ -1531,7 +1551,7 @@ emptyFunctionWithReset.resetWarningCache = emptyFunction;
 
 var factoryWithThrowingShims = function() {
   function shim(props, propName, componentName, location, propFullName, secret) {
-    if (secret === ReactPropTypesSecret_1) {
+    if (secret === ReactPropTypesSecret) {
       // It is still safe when called from React.
       return;
     }
@@ -1584,20 +1604,20 @@ var factoryWithThrowingShims = function() {
  * LICENSE file in the root directory of this source tree.
  */
 
-var propTypes = createCommonjsModule(function (module) {
 if (process.env.NODE_ENV !== 'production') {
-  var ReactIs = reactIs;
+  var ReactIs = reactIs$1.exports;
 
   // By explicitly using `prop-types` you are opting into new development behavior.
   // http://fb.me/prop-types-in-prod
   var throwOnDirectAccess = true;
-  module.exports = factoryWithTypeCheckers(ReactIs.isElement, throwOnDirectAccess);
+  propTypes.exports = factoryWithTypeCheckers(ReactIs.isElement, throwOnDirectAccess);
 } else {
   // By explicitly using `prop-types` you are opting into new production behavior.
   // http://fb.me/prop-types-in-prod
-  module.exports = factoryWithThrowingShims();
+  propTypes.exports = factoryWithThrowingShims();
 }
-});
+
+var PropTypes = propTypes.exports;
 
 var ReactReduxContext = /*#__PURE__*/React__default.createContext(null);
 
@@ -1786,16 +1806,17 @@ function Provider$1(_ref) {
 
 if (process.env.NODE_ENV !== 'production') {
   Provider$1.propTypes = {
-    store: propTypes.shape({
-      subscribe: propTypes.func.isRequired,
-      dispatch: propTypes.func.isRequired,
-      getState: propTypes.func.isRequired
+    store: PropTypes.shape({
+      subscribe: PropTypes.func.isRequired,
+      dispatch: PropTypes.func.isRequired,
+      getState: PropTypes.func.isRequired
     }),
-    context: propTypes.object,
-    children: propTypes.any
+    context: PropTypes.object,
+    children: PropTypes.any
   };
 }
 
+var reactIs = reactIs$1.exports;
 var FORWARD_REF_STATICS = {
   '$$typeof': true,
   render: true,
@@ -1973,13 +1994,16 @@ function useSelectorWithStoreAndSubscription(selector, equalityFn, store, contex
   useIsomorphicLayoutEffect(function () {
     function checkForUpdates() {
       try {
-        var _newSelectedState = latestSelector.current(store.getState());
+        var newStoreState = store.getState();
+
+        var _newSelectedState = latestSelector.current(newStoreState);
 
         if (equalityFn(_newSelectedState, latestSelectedState.current)) {
           return;
         }
 
         latestSelectedState.current = _newSelectedState;
+        latestStoreState.current = newStoreState;
       } catch (err) {
         // we ignore all errors here, since when the component
         // is re-rendered, the selectors are called again, and
@@ -2021,8 +2045,18 @@ function createSelectorHook(context) {
       equalityFn = refEquality;
     }
 
-    if (process.env.NODE_ENV !== 'production' && !selector) {
-      throw new Error("You must pass a selector to useSelector");
+    if (process.env.NODE_ENV !== 'production') {
+      if (!selector) {
+        throw new Error("You must pass a selector to useSelector");
+      }
+
+      if (typeof selector !== 'function') {
+        throw new Error("You must pass a function as a selector to useSelector");
+      }
+
+      if (typeof equalityFn !== 'function') {
+        throw new Error("You must pass a function as an equality function to useSelector");
+      }
     }
 
     var _useReduxContext = useReduxContext$1(),
@@ -2296,7 +2330,7 @@ var useStore = function useStore() {
 };
 var useDispatch = useDispatch$1;
 
-function _arrayLikeToArray(arr, len) {
+function _arrayLikeToArray$1(arr, len) {
   if (len == null || len > arr.length) len = arr.length;
 
   for (var i = 0, arr2 = new Array(len); i < len; i++) {
@@ -2307,20 +2341,20 @@ function _arrayLikeToArray(arr, len) {
 }
 
 function _arrayWithoutHoles(arr) {
-  if (Array.isArray(arr)) return _arrayLikeToArray(arr);
+  if (Array.isArray(arr)) return _arrayLikeToArray$1(arr);
 }
 
 function _iterableToArray(iter) {
-  if (typeof Symbol !== "undefined" && Symbol.iterator in Object(iter)) return Array.from(iter);
+  if (typeof Symbol !== "undefined" && iter[Symbol.iterator] != null || iter["@@iterator"] != null) return Array.from(iter);
 }
 
-function _unsupportedIterableToArray(o, minLen) {
+function _unsupportedIterableToArray$1(o, minLen) {
   if (!o) return;
-  if (typeof o === "string") return _arrayLikeToArray(o, minLen);
+  if (typeof o === "string") return _arrayLikeToArray$1(o, minLen);
   var n = Object.prototype.toString.call(o).slice(8, -1);
   if (n === "Object" && o.constructor) n = o.constructor.name;
   if (n === "Map" || n === "Set") return Array.from(o);
-  if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen);
+  if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray$1(o, minLen);
 }
 
 function _nonIterableSpread() {
@@ -2328,22 +2362,25 @@ function _nonIterableSpread() {
 }
 
 function _toConsumableArray(arr) {
-  return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread();
+  return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray$1(arr) || _nonIterableSpread();
 }
 
-function _arrayWithHoles(arr) {
+function _arrayWithHoles$1(arr) {
   if (Array.isArray(arr)) return arr;
 }
 
-function _iterableToArrayLimit(arr, i) {
-  if (typeof Symbol === "undefined" || !(Symbol.iterator in Object(arr))) return;
+function _iterableToArrayLimit$1(arr, i) {
+  var _i = arr == null ? null : typeof Symbol !== "undefined" && arr[Symbol.iterator] || arr["@@iterator"];
+
+  if (_i == null) return;
   var _arr = [];
   var _n = true;
   var _d = false;
-  var _e = undefined;
+
+  var _s, _e;
 
   try {
-    for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
+    for (_i = _i.call(arr); !(_n = (_s = _i.next()).done); _n = true) {
       _arr.push(_s.value);
 
       if (i && _arr.length === i) break;
@@ -2362,12 +2399,12 @@ function _iterableToArrayLimit(arr, i) {
   return _arr;
 }
 
-function _nonIterableRest() {
+function _nonIterableRest$1() {
   throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
 }
 
-function _slicedToArray(arr, i) {
-  return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest();
+function _slicedToArray$1(arr, i) {
+  return _arrayWithHoles$1(arr) || _iterableToArrayLimit$1(arr, i) || _unsupportedIterableToArray$1(arr, i) || _nonIterableRest$1();
 }
 
 var isInputDOMNode = function isInputDOMNode(e) {
@@ -2399,7 +2436,7 @@ var getHostForElement = function getHostForElement(element) {
 
 var useKeyPress = (function (keyCode) {
   var _useState = useState(false),
-      _useState2 = _slicedToArray(_useState, 2),
+      _useState2 = _slicedToArray$1(_useState, 2),
       keyPressed = _useState2[0],
       setKeyPressed = _useState2[1];
 
@@ -2435,24 +2472,9 @@ var useKeyPress = (function (keyCode) {
   return keyPressed;
 });
 
-function _defineProperty$1(obj, key, value) {
-  if (key in obj) {
-    Object.defineProperty(obj, key, {
-      value: value,
-      enumerable: true,
-      configurable: true,
-      writable: true
-    });
-  } else {
-    obj[key] = value;
-  }
+function ownKeys$d(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) { symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); } keys.push.apply(keys, symbols); } return keys; }
 
-  return obj;
-}
-
-function ownKeys$8(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
-
-function _objectSpread$8(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys$8(Object(source), true).forEach(function (key) { _defineProperty$1(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys$8(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+function _objectSpread$d(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys$d(Object(source), true).forEach(function (key) { _defineProperty$2(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys$d(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
 var isEdge = function isEdge(element) {
   return 'id' in element && 'source' in element && 'target' in element;
 };
@@ -2520,9 +2542,9 @@ var addEdge = function addEdge(edgeParams, elements) {
   var edge;
 
   if (isEdge(edgeParams)) {
-    edge = _objectSpread$8({}, edgeParams);
+    edge = _objectSpread$d({}, edgeParams);
   } else {
-    edge = _objectSpread$8(_objectSpread$8({}, edgeParams), {}, {
+    edge = _objectSpread$d(_objectSpread$d({}, edgeParams), {}, {
       id: getEdgeId(edgeParams)
     });
   }
@@ -2549,7 +2571,7 @@ var updateEdge = function updateEdge(oldEdge, newConnection, elements) {
   } // Remove old edge and create the new edge with parameters of old edge.
 
 
-  var edge = _objectSpread$8(_objectSpread$8({}, oldEdge), {}, {
+  var edge = _objectSpread$d(_objectSpread$d({}, oldEdge), {}, {
     id: getEdgeId(newConnection),
     source: newConnection.source,
     target: newConnection.target,
@@ -2565,12 +2587,12 @@ var pointToRendererPoint = function pointToRendererPoint(_ref2, _ref3, snapToGri
   var x = _ref2.x,
       y = _ref2.y;
 
-  var _ref5 = _slicedToArray(_ref3, 3),
+  var _ref5 = _slicedToArray$1(_ref3, 3),
       tx = _ref5[0],
       ty = _ref5[1],
       tScale = _ref5[2];
 
-  var _ref6 = _slicedToArray(_ref4, 2),
+  var _ref6 = _slicedToArray$1(_ref4, 2),
       snapX = _ref6[0],
       snapY = _ref6[1];
 
@@ -2599,7 +2621,7 @@ var onLoadProject = function onLoadProject(currentStore) {
   };
 };
 var parseNode = function parseNode(node, nodeExtent) {
-  return _objectSpread$8(_objectSpread$8({}, node), {}, {
+  return _objectSpread$d(_objectSpread$d({}, node), {}, {
     id: node.id.toString(),
     type: node.type || 'default',
     __rf: {
@@ -2612,7 +2634,7 @@ var parseNode = function parseNode(node, nodeExtent) {
   });
 };
 var parseEdge = function parseEdge(edge) {
-  return _objectSpread$8(_objectSpread$8({}, edge), {}, {
+  return _objectSpread$d(_objectSpread$d({}, edge), {}, {
     source: edge.source.toString(),
     target: edge.target.toString(),
     sourceHandle: edge.sourceHandle ? edge.sourceHandle.toString() : null,
@@ -2665,7 +2687,7 @@ var getRectOfNodes = function getRectOfNodes(nodes) {
     var position = _ref9$__rf.position,
         width = _ref9$__rf.width,
         height = _ref9$__rf.height;
-    return getBoundsOfBoxes(currBox, rectToBox(_objectSpread$8(_objectSpread$8({}, position), {}, {
+    return getBoundsOfBoxes(currBox, rectToBox(_objectSpread$d(_objectSpread$d({}, position), {}, {
       width: width,
       height: height
     })));
@@ -2679,7 +2701,7 @@ var getRectOfNodes = function getRectOfNodes(nodes) {
 };
 var getNodesInside = function getNodesInside(nodes, rect) {
   var _ref13 = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [0, 0, 1],
-      _ref14 = _slicedToArray(_ref13, 3),
+      _ref14 = _slicedToArray$1(_ref13, 3),
       tx = _ref14[0],
       ty = _ref14[1],
       tScale = _ref14[2];
@@ -2697,7 +2719,7 @@ var getNodesInside = function getNodesInside(nodes, rect) {
         width = _ref15$__rf.width,
         height = _ref15$__rf.height,
         isDragging = _ref15$__rf.isDragging;
-    var nBox = rectToBox(_objectSpread$8(_objectSpread$8({}, position), {}, {
+    var nBox = rectToBox(_objectSpread$d(_objectSpread$d({}, position), {}, {
       width: width,
       height: height
     }));
@@ -2729,13 +2751,13 @@ var getConnectedEdges = function getConnectedEdges(nodes, edges) {
 
 var parseElements = function parseElements(nodes, edges) {
   return [].concat(_toConsumableArray(nodes.map(function (node) {
-    var n = _objectSpread$8({}, node);
+    var n = _objectSpread$d({}, node);
 
     n.position = n.__rf.position;
     delete n.__rf;
     return n;
   })), _toConsumableArray(edges.map(function (e) {
-    return _objectSpread$8({}, e);
+    return _objectSpread$d({}, e);
   })));
 };
 
@@ -2961,10 +2983,14 @@ function selection_select(select) {
   return new Selection$1(subgroups, this._parents);
 }
 
+// Given something array like (or null), returns something that is strictly an
+// array. This is used to ensure that array-like objects passed to d3.selectAll
+// or selection.selectAll are converted into proper arrays when creating a
+// selection; we don’t ever want to create a selection backed by a live
+// HTMLCollection or NodeList. However, note that selection.selectAll will use a
+// static NodeList as a group, since it safely derived from querySelectorAll.
 function array(x) {
-  return typeof x === "object" && "length" in x
-    ? x // Array, TypedArray, NodeList, array-like
-    : Array.from(x); // Map, Set, iterable, string, or anything else
+  return x == null ? [] : Array.isArray(x) ? x : Array.from(x);
 }
 
 function empty() {
@@ -2979,8 +3005,7 @@ function selectorAll(selector) {
 
 function arrayAll(select) {
   return function() {
-    var group = select.apply(this, arguments);
-    return group == null ? [] : array(group);
+    return array(select.apply(this, arguments));
   };
 }
 
@@ -3032,7 +3057,7 @@ function selection_selectChild(match) {
 var filter = Array.prototype.filter;
 
 function children() {
-  return this.children;
+  return Array.from(this.children);
 }
 
 function childrenFilter(match) {
@@ -3177,7 +3202,7 @@ function selection_data(value, key) {
     var parent = parents[j],
         group = groups[j],
         groupLength = group.length,
-        data = array(value.call(parent, parent && parent.__data__, j, parents)),
+        data = arraylike(value.call(parent, parent && parent.__data__, j, parents)),
         dataLength = data.length,
         enterGroup = enter[j] = new Array(dataLength),
         updateGroup = update[j] = new Array(dataLength),
@@ -3203,20 +3228,40 @@ function selection_data(value, key) {
   return update;
 }
 
+// Given some data, this returns an array-like view of it: an object that
+// exposes a length property and allows numeric indexing. Note that unlike
+// selectAll, this isn’t worried about “live” collections because the resulting
+// array will only be used briefly while data is being bound. (It is possible to
+// cause the data to change while iterating by using a key function, but please
+// don’t; we’d rather avoid a gratuitous copy.)
+function arraylike(data) {
+  return typeof data === "object" && "length" in data
+    ? data // Array, TypedArray, NodeList, array-like
+    : Array.from(data); // Map, Set, iterable, string, or anything else
+}
+
 function selection_exit() {
   return new Selection$1(this._exit || this._groups.map(sparse), this._parents);
 }
 
 function selection_join(onenter, onupdate, onexit) {
   var enter = this.enter(), update = this, exit = this.exit();
-  enter = typeof onenter === "function" ? onenter(enter) : enter.append(onenter + "");
-  if (onupdate != null) update = onupdate(update);
+  if (typeof onenter === "function") {
+    enter = onenter(enter);
+    if (enter) enter = enter.selection();
+  } else {
+    enter = enter.append(onenter + "");
+  }
+  if (onupdate != null) {
+    update = onupdate(update);
+    if (update) update = update.selection();
+  }
   if (onexit == null) exit.remove(); else onexit(exit);
   return enter && update ? enter.merge(update).order() : update;
 }
 
-function selection_merge(selection) {
-  if (!(selection instanceof Selection$1)) throw new Error("invalid merge");
+function selection_merge(context) {
+  var selection = context.selection ? context.selection() : context;
 
   for (var groups0 = this._groups, groups1 = selection._groups, m0 = groups0.length, m1 = groups1.length, m = Math.min(m0, m1), merges = new Array(m0), j = 0; j < m; ++j) {
     for (var group0 = groups0[j], group1 = groups1[j], n = group0.length, merge = merges[j] = new Array(n), node, i = 0; i < n; ++i) {
@@ -3825,6 +3870,9 @@ function pointer(event, node) {
   return [event.pageX, event.pageY];
 }
 
+// These are typically used in conjunction with noevent to ensure that we can
+const nonpassivecapture = {capture: true, passive: false};
+
 function noevent$1(event) {
   event.preventDefault();
   event.stopImmediatePropagation();
@@ -3832,9 +3880,9 @@ function noevent$1(event) {
 
 function dragDisable(view) {
   var root = view.document.documentElement,
-      selection = select(view).on("dragstart.drag", noevent$1, true);
+      selection = select(view).on("dragstart.drag", noevent$1, nonpassivecapture);
   if ("onselectstart" in root) {
-    selection.on("selectstart.drag", noevent$1, true);
+    selection.on("selectstart.drag", noevent$1, nonpassivecapture);
   } else {
     root.__noselect = root.style.MozUserSelect;
     root.style.MozUserSelect = "none";
@@ -3845,7 +3893,7 @@ function yesdrag(view, noclick) {
   var root = view.document.documentElement,
       selection = select(view).on("dragstart.drag", null);
   if (noclick) {
-    selection.on("click.drag", noevent$1, true);
+    selection.on("click.drag", noevent$1, nonpassivecapture);
     setTimeout(function() { selection.on("click.drag", null); }, 0);
   }
   if ("onselectstart" in root) {
@@ -4590,7 +4638,7 @@ function timerFlush() {
   ++frame; // Pretend we’ve set an alarm, if we haven’t already.
   var t = taskHead, e;
   while (t) {
-    if ((e = clockNow - t._time) >= 0) t._call.call(null, e);
+    if ((e = clockNow - t._time) >= 0) t._call.call(undefined, e);
     t = t._next;
   }
   --frame;
@@ -5444,6 +5492,8 @@ Transition.prototype = {
   constructor: Transition,
   select: transition_select,
   selectAll: transition_selectAll,
+  selectChild: selection_prototype.selectChild,
+  selectChildren: selection_prototype.selectChildren,
   filter: transition_filter,
   merge: transition_merge,
   selection: transition_selection,
@@ -5651,7 +5701,7 @@ function zoom() {
   function zoom(selection) {
     selection
         .property("__zoom", defaultTransform)
-        .on("wheel.zoom", wheeled)
+        .on("wheel.zoom", wheeled, {passive: false})
         .on("mousedown.zoom", mousedowned)
         .on("dblclick.zoom", dblclicked)
       .filter(touchable)
@@ -5848,10 +5898,10 @@ function zoom() {
 
   function mousedowned(event, ...args) {
     if (touchending || !filter.apply(this, arguments)) return;
-    var g = gesture(this, args, true).event(event),
+    var currentTarget = event.currentTarget,
+        g = gesture(this, args, true).event(event),
         v = select(event.view).on("mousemove.zoom", mousemoved, true).on("mouseup.zoom", mouseupped, true),
         p = pointer(event, currentTarget),
-        currentTarget = event.currentTarget,
         x0 = event.clientX,
         y0 = event.clientY;
 
@@ -6125,6 +6175,10 @@ var eventToFlowTransform = function eventToFlowTransform(eventTransform) {
   };
 };
 
+var hasNoWheelClass = function hasNoWheelClass(event) {
+  return event.target.closest('.nowheel');
+};
+
 var ZoomPane = function ZoomPane(_ref) {
   var onMove = _ref.onMove,
       onMoveStart = _ref.onMoveStart,
@@ -6151,6 +6205,8 @@ var ZoomPane = function ZoomPane(_ref) {
       defaultZoom = _ref$defaultZoom === void 0 ? 1 : _ref$defaultZoom,
       translateExtent = _ref.translateExtent,
       zoomActivationKeyCode = _ref.zoomActivationKeyCode,
+      _ref$preventScrolling = _ref.preventScrolling,
+      preventScrolling = _ref$preventScrolling === void 0 ? true : _ref$preventScrolling,
       children = _ref.children;
   var zoomPane = useRef(null);
   var prevTransform = useRef({
@@ -6182,6 +6238,7 @@ var ZoomPane = function ZoomPane(_ref) {
       var currentTranslateExtent = typeof translateExtent !== 'undefined' ? translateExtent : state.translateExtent;
       var d3ZoomInstance = zoom().scaleExtent([state.minZoom, state.maxZoom]).translateExtent(currentTranslateExtent);
       var selection = select(zoomPane.current).call(d3ZoomInstance);
+      d3ZoomInstance.clickDistance(40);
       var clampedX = clamp(defaultPosition[0], currentTranslateExtent[0][0], currentTranslateExtent[1][0]);
       var clampedY = clamp(defaultPosition[1], currentTranslateExtent[0][1], currentTranslateExtent[1][1]);
       var clampedZoom = clamp(defaultZoom, state.minZoom, state.maxZoom);
@@ -6200,6 +6257,10 @@ var ZoomPane = function ZoomPane(_ref) {
     if (d3Selection && d3Zoom) {
       if (panOnScroll && !zoomActivationKeyPressed) {
         d3Selection.on('wheel', function (event) {
+          if (hasNoWheelClass(event)) {
+            return false;
+          }
+
           event.preventDefault();
           event.stopImmediatePropagation();
           var currentZoom = d3Selection.property('__zoom').k || 1;
@@ -6223,10 +6284,16 @@ var ZoomPane = function ZoomPane(_ref) {
           d3Zoom.translateBy(d3Selection, -(deltaX / currentZoom) * panOnScrollSpeed, -(deltaY / currentZoom) * panOnScrollSpeed);
         }).on('wheel.zoom', null);
       } else if (typeof d3ZoomHandler !== 'undefined') {
-        d3Selection.on('wheel', null).on('wheel.zoom', d3ZoomHandler);
+        d3Selection.on('wheel', function (event) {
+          if (!preventScrolling || hasNoWheelClass(event)) {
+            return null;
+          }
+
+          event.preventDefault();
+        }).on('wheel.zoom', d3ZoomHandler);
       }
     }
-  }, [panOnScroll, panOnScrollMode, d3Selection, d3Zoom, d3ZoomHandler, zoomActivationKeyPressed, zoomOnPinch]);
+  }, [panOnScroll, panOnScrollMode, d3Selection, d3Zoom, d3ZoomHandler, zoomActivationKeyPressed, zoomOnPinch, preventScrolling]);
   useEffect(function () {
     if (d3Zoom) {
       if (selectionKeyPressed) {
@@ -6293,7 +6360,7 @@ var ZoomPane = function ZoomPane(_ref) {
           return false;
         }
 
-        if (event.target.closest('.nowheel') && event.type === 'wheel') {
+        if (hasNoWheelClass(event) && event.type === 'wheel') {
           return false;
         } // when the target element is a node, we still allow zooming
         // For our use case, we want to be able to drag, even if the mouse is over a node
@@ -6440,20 +6507,26 @@ var UserSelection = /*#__PURE__*/memo(function (_ref) {
   }, /*#__PURE__*/React__default.createElement(SelectionRect, null));
 });
 
+var cjs = {exports: {}};
+
+var Draggable$1 = {};
+
+var classnames = {exports: {}};
+
 /*!
-  Copyright (c) 2017 Jed Watson.
+  Copyright (c) 2018 Jed Watson.
   Licensed under the MIT License (MIT), see
   http://jedwatson.github.io/classnames
 */
 
-var classnames = createCommonjsModule(function (module) {
+(function (module) {
 /* global define */
 
 (function () {
 
 	var hasOwn = {}.hasOwnProperty;
 
-	function classNames () {
+	function classNames() {
 		var classes = [];
 
 		for (var i = 0; i < arguments.length; i++) {
@@ -6464,16 +6537,22 @@ var classnames = createCommonjsModule(function (module) {
 
 			if (argType === 'string' || argType === 'number') {
 				classes.push(arg);
-			} else if (Array.isArray(arg) && arg.length) {
-				var inner = classNames.apply(null, arg);
-				if (inner) {
-					classes.push(inner);
+			} else if (Array.isArray(arg)) {
+				if (arg.length) {
+					var inner = classNames.apply(null, arg);
+					if (inner) {
+						classes.push(inner);
+					}
 				}
 			} else if (argType === 'object') {
-				for (var key in arg) {
-					if (hasOwn.call(arg, key) && arg[key]) {
-						classes.push(key);
+				if (arg.toString === Object.prototype.toString) {
+					for (var key in arg) {
+						if (hasOwn.call(arg, key) && arg[key]) {
+							classes.push(key);
+						}
 					}
+				} else {
+					classes.push(arg.toString());
 				}
 			}
 		}
@@ -6488,13 +6567,20 @@ var classnames = createCommonjsModule(function (module) {
 		window.classNames = classNames;
 	}
 }());
-});
+}(classnames));
 
-var findInArray_1 = findInArray;
-var isFunction_1 = isFunction;
-var isNum_1 = isNum;
-var int_1 = int;
-var dontSetMe_1 = dontSetMe;
+var domFns = {};
+
+var shims = {};
+
+Object.defineProperty(shims, "__esModule", {
+  value: true
+});
+shims.findInArray = findInArray;
+shims.isFunction = isFunction;
+shims.isNum = isNum;
+shims.int = int;
+shims.dontSetMe = dontSetMe;
 
 // @credits https://gist.github.com/rogozhnikoff/a43cfed27c41e4e68cdc
 function findInArray(array
@@ -6545,23 +6631,15 @@ function dontSetMe(props
   }
 }
 
-var shims = /*#__PURE__*/Object.defineProperty({
-	findInArray: findInArray_1,
-	isFunction: isFunction_1,
-	isNum: isNum_1,
-	int: int_1,
-	dontSetMe: dontSetMe_1
-}, '__esModule', {value: true});
+var getPrefix$1 = {};
 
-var getPrefix_1 = createCommonjsModule(function (module, exports) {
-
-Object.defineProperty(exports, "__esModule", {
+Object.defineProperty(getPrefix$1, "__esModule", {
   value: true
 });
-exports.getPrefix = getPrefix;
-exports.browserPrefixToKey = browserPrefixToKey;
-exports.browserPrefixToStyle = browserPrefixToStyle;
-exports.default = void 0;
+getPrefix$1.getPrefix = getPrefix;
+getPrefix$1.browserPrefixToKey = browserPrefixToKey;
+getPrefix$1.browserPrefixToStyle = browserPrefixToStyle;
+getPrefix$1.default = void 0;
 var prefixes = ['Moz', 'Webkit', 'O', 'ms'];
 
 function getPrefix()
@@ -6631,44 +6709,45 @@ function kebabToTitleCase(str
 
 var _default = getPrefix();
 
-exports.default = _default;
+getPrefix$1.default = _default;
+
+function _typeof$1(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$1 = function _typeof(obj) { return typeof obj; }; } else { _typeof$1 = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$1(obj); }
+
+Object.defineProperty(domFns, "__esModule", {
+  value: true
 });
+domFns.matchesSelector = matchesSelector;
+domFns.matchesSelectorAndParentsTo = matchesSelectorAndParentsTo;
+domFns.addEvent = addEvent;
+domFns.removeEvent = removeEvent;
+domFns.outerHeight = outerHeight;
+domFns.outerWidth = outerWidth;
+domFns.innerHeight = innerHeight;
+domFns.innerWidth = innerWidth;
+domFns.offsetXYFromParent = offsetXYFromParent;
+domFns.createCSSTransform = createCSSTransform;
+domFns.createSVGTransform = createSVGTransform;
+domFns.getTranslation = getTranslation;
+domFns.getTouch = getTouch;
+domFns.getTouchIdentifier = getTouchIdentifier;
+domFns.addUserSelectStyles = addUserSelectStyles;
+domFns.removeUserSelectStyles = removeUserSelectStyles;
+domFns.addClassName = addClassName;
+domFns.removeClassName = removeClassName;
 
-function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+var _shims$2 = shims;
 
+var _getPrefix = _interopRequireWildcard$1(getPrefix$1);
 
-var matchesSelector_1 = matchesSelector;
-var matchesSelectorAndParentsTo_1 = matchesSelectorAndParentsTo;
-var addEvent_1 = addEvent;
-var removeEvent_1 = removeEvent;
-var outerHeight_1 = outerHeight;
-var outerWidth_1 = outerWidth;
-var innerHeight_1 = innerHeight;
-var innerWidth_1 = innerWidth;
-var offsetXYFromParent_1 = offsetXYFromParent;
-var createCSSTransform_1 = createCSSTransform;
-var createSVGTransform_1 = createSVGTransform;
-var getTranslation_1 = getTranslation;
-var getTouch_1 = getTouch;
-var getTouchIdentifier_1 = getTouchIdentifier;
-var addUserSelectStyles_1 = addUserSelectStyles;
-var removeUserSelectStyles_1 = removeUserSelectStyles;
-var addClassName_1 = addClassName;
-var removeClassName_1 = removeClassName;
+function _getRequireWildcardCache$1() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache$1 = function _getRequireWildcardCache() { return cache; }; return cache; }
 
+function _interopRequireWildcard$1(obj) { if (obj && obj.__esModule) { return obj; } if (obj === null || _typeof$1(obj) !== "object" && typeof obj !== "function") { return { default: obj }; } var cache = _getRequireWildcardCache$1(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj.default = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
 
+function ownKeys$c(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
 
-var _getPrefix = _interopRequireWildcard(getPrefix_1);
+function _objectSpread$c(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys$c(Object(source), true).forEach(function (key) { _defineProperty$1(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys$c(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
 
-function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function _getRequireWildcardCache() { return cache; }; return cache; }
-
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } if (obj === null || _typeof(obj) !== "object" && typeof obj !== "function") { return { default: obj }; } var cache = _getRequireWildcardCache(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj.default = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
-
-function ownKeys$7(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
-
-function _objectSpread$7(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys$7(Object(source), true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys$7(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
-
-function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+function _defineProperty$1(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 var matchesSelectorFunc = '';
 
@@ -6680,15 +6759,15 @@ function matchesSelector(el
 /*: boolean*/
 {
   if (!matchesSelectorFunc) {
-    matchesSelectorFunc = (0, shims.findInArray)(['matches', 'webkitMatchesSelector', 'mozMatchesSelector', 'msMatchesSelector', 'oMatchesSelector'], function (method) {
+    matchesSelectorFunc = (0, _shims$2.findInArray)(['matches', 'webkitMatchesSelector', 'mozMatchesSelector', 'msMatchesSelector', 'oMatchesSelector'], function (method) {
       // $FlowIgnore: Doesn't think elements are indexable
-      return (0, shims.isFunction)(el[method]);
+      return (0, _shims$2.isFunction)(el[method]);
     });
   } // Might not be found entirely (not an Element?) - in that case, bail
   // $FlowIgnore: Doesn't think elements are indexable
 
 
-  if (!(0, shims.isFunction)(el[matchesSelectorFunc])) return false; // $FlowIgnore: Doesn't think elements are indexable
+  if (!(0, _shims$2.isFunction)(el[matchesSelectorFunc])) return false; // $FlowIgnore: Doesn't think elements are indexable
 
   return el[matchesSelectorFunc](selector);
 } // Works up the tree to the draggable itself attempting to match selector.
@@ -6727,7 +6806,7 @@ function addEvent(el
 {
   if (!el) return;
 
-  var options = _objectSpread$7({
+  var options = _objectSpread$c({
     capture: true
   }, inputOptions);
 
@@ -6754,7 +6833,7 @@ function removeEvent(el
 {
   if (!el) return;
 
-  var options = _objectSpread$7({
+  var options = _objectSpread$c({
     capture: true
   }, inputOptions);
 
@@ -6777,8 +6856,8 @@ function outerHeight(node
   // offsetTop which is including margin. See getBoundPosition
   var height = node.clientHeight;
   var computedStyle = node.ownerDocument.defaultView.getComputedStyle(node);
-  height += (0, shims.int)(computedStyle.borderTopWidth);
-  height += (0, shims.int)(computedStyle.borderBottomWidth);
+  height += (0, _shims$2.int)(computedStyle.borderTopWidth);
+  height += (0, _shims$2.int)(computedStyle.borderBottomWidth);
   return height;
 }
 
@@ -6791,8 +6870,8 @@ function outerWidth(node
   // offsetLeft which is including margin. See getBoundPosition
   var width = node.clientWidth;
   var computedStyle = node.ownerDocument.defaultView.getComputedStyle(node);
-  width += (0, shims.int)(computedStyle.borderLeftWidth);
-  width += (0, shims.int)(computedStyle.borderRightWidth);
+  width += (0, _shims$2.int)(computedStyle.borderLeftWidth);
+  width += (0, _shims$2.int)(computedStyle.borderRightWidth);
   return width;
 }
 
@@ -6803,8 +6882,8 @@ function innerHeight(node
 {
   var height = node.clientHeight;
   var computedStyle = node.ownerDocument.defaultView.getComputedStyle(node);
-  height -= (0, shims.int)(computedStyle.paddingTop);
-  height -= (0, shims.int)(computedStyle.paddingBottom);
+  height -= (0, _shims$2.int)(computedStyle.paddingTop);
+  height -= (0, _shims$2.int)(computedStyle.paddingBottom);
   return height;
 }
 
@@ -6815,8 +6894,8 @@ function innerWidth(node
 {
   var width = node.clientWidth;
   var computedStyle = node.ownerDocument.defaultView.getComputedStyle(node);
-  width -= (0, shims.int)(computedStyle.paddingLeft);
-  width -= (0, shims.int)(computedStyle.paddingRight);
+  width -= (0, _shims$2.int)(computedStyle.paddingLeft);
+  width -= (0, _shims$2.int)(computedStyle.paddingRight);
   return width;
 } // Get from offsetParent
 
@@ -6851,7 +6930,7 @@ function createCSSTransform(controlPos
 /*: Object*/
 {
   var translation = getTranslation(controlPos, positionOffset, 'px');
-  return _defineProperty({}, (0, _getPrefix.browserPrefixToKey)('transform', _getPrefix.default), translation);
+  return _defineProperty$1({}, (0, _getPrefix.browserPrefixToKey)('transform', _getPrefix.default), translation);
 }
 
 function createSVGTransform(controlPos
@@ -6892,9 +6971,9 @@ function getTouch(e
 )
 /*: ?{clientX: number, clientY: number}*/
 {
-  return e.targetTouches && (0, shims.findInArray)(e.targetTouches, function (t) {
+  return e.targetTouches && (0, _shims$2.findInArray)(e.targetTouches, function (t) {
     return identifier === t.identifier;
-  }) || e.changedTouches && (0, shims.findInArray)(e.changedTouches, function (t) {
+  }) || e.changedTouches && (0, _shims$2.findInArray)(e.changedTouches, function (t) {
     return identifier === t.identifier;
   });
 }
@@ -6980,38 +7059,22 @@ function removeClassName(el
   }
 }
 
-var domFns = /*#__PURE__*/Object.defineProperty({
-	matchesSelector: matchesSelector_1,
-	matchesSelectorAndParentsTo: matchesSelectorAndParentsTo_1,
-	addEvent: addEvent_1,
-	removeEvent: removeEvent_1,
-	outerHeight: outerHeight_1,
-	outerWidth: outerWidth_1,
-	innerHeight: innerHeight_1,
-	innerWidth: innerWidth_1,
-	offsetXYFromParent: offsetXYFromParent_1,
-	createCSSTransform: createCSSTransform_1,
-	createSVGTransform: createSVGTransform_1,
-	getTranslation: getTranslation_1,
-	getTouch: getTouch_1,
-	getTouchIdentifier: getTouchIdentifier_1,
-	addUserSelectStyles: addUserSelectStyles_1,
-	removeUserSelectStyles: removeUserSelectStyles_1,
-	addClassName: addClassName_1,
-	removeClassName: removeClassName_1
-}, '__esModule', {value: true});
+var positionFns = {};
 
-var getBoundPosition_1 = getBoundPosition;
-var snapToGrid_1 = snapToGrid;
-var canDragX_1 = canDragX;
-var canDragY_1 = canDragY;
-var getControlPosition_1 = getControlPosition;
-var createCoreData_1 = createCoreData;
-var createDraggableData_1 = createDraggableData;
+Object.defineProperty(positionFns, "__esModule", {
+  value: true
+});
+positionFns.getBoundPosition = getBoundPosition;
+positionFns.snapToGrid = snapToGrid;
+positionFns.canDragX = canDragX;
+positionFns.canDragY = canDragY;
+positionFns.getControlPosition = getControlPosition;
+positionFns.createCoreData = createCoreData;
+positionFns.createDraggableData = createDraggableData;
 
+var _shims$1 = shims;
 
-
-
+var _domFns$1 = domFns;
 
 function getBoundPosition(draggable
 /*: Draggable*/
@@ -7048,19 +7111,19 @@ function getBoundPosition(draggable
     var boundNodeStyle = ownerWindow.getComputedStyle(boundNode); // Compute bounds. This is a pain with padding and offsets but this gets it exactly right.
 
     bounds = {
-      left: -node.offsetLeft + (0, shims.int)(boundNodeStyle.paddingLeft) + (0, shims.int)(nodeStyle.marginLeft),
-      top: -node.offsetTop + (0, shims.int)(boundNodeStyle.paddingTop) + (0, shims.int)(nodeStyle.marginTop),
-      right: (0, domFns.innerWidth)(boundNode) - (0, domFns.outerWidth)(node) - node.offsetLeft + (0, shims.int)(boundNodeStyle.paddingRight) - (0, shims.int)(nodeStyle.marginRight),
-      bottom: (0, domFns.innerHeight)(boundNode) - (0, domFns.outerHeight)(node) - node.offsetTop + (0, shims.int)(boundNodeStyle.paddingBottom) - (0, shims.int)(nodeStyle.marginBottom)
+      left: -node.offsetLeft + (0, _shims$1.int)(boundNodeStyle.paddingLeft) + (0, _shims$1.int)(nodeStyle.marginLeft),
+      top: -node.offsetTop + (0, _shims$1.int)(boundNodeStyle.paddingTop) + (0, _shims$1.int)(nodeStyle.marginTop),
+      right: (0, _domFns$1.innerWidth)(boundNode) - (0, _domFns$1.outerWidth)(node) - node.offsetLeft + (0, _shims$1.int)(boundNodeStyle.paddingRight) - (0, _shims$1.int)(nodeStyle.marginRight),
+      bottom: (0, _domFns$1.innerHeight)(boundNode) - (0, _domFns$1.outerHeight)(node) - node.offsetTop + (0, _shims$1.int)(boundNodeStyle.paddingBottom) - (0, _shims$1.int)(nodeStyle.marginBottom)
     };
   } // Keep x and y below right and bottom limits...
 
 
-  if ((0, shims.isNum)(bounds.right)) x = Math.min(x, bounds.right);
-  if ((0, shims.isNum)(bounds.bottom)) y = Math.min(y, bounds.bottom); // But above left and top limits.
+  if ((0, _shims$1.isNum)(bounds.right)) x = Math.min(x, bounds.right);
+  if ((0, _shims$1.isNum)(bounds.bottom)) y = Math.min(y, bounds.bottom); // But above left and top limits.
 
-  if ((0, shims.isNum)(bounds.left)) x = Math.max(x, bounds.left);
-  if ((0, shims.isNum)(bounds.top)) y = Math.max(y, bounds.top);
+  if ((0, _shims$1.isNum)(bounds.left)) x = Math.max(x, bounds.left);
+  if ((0, _shims$1.isNum)(bounds.top)) y = Math.max(y, bounds.top);
   return [x, y];
 }
 
@@ -7104,13 +7167,13 @@ function getControlPosition(e
 )
 /*: ?ControlPosition*/
 {
-  var touchObj = typeof touchIdentifier === 'number' ? (0, domFns.getTouch)(e, touchIdentifier) : null;
+  var touchObj = typeof touchIdentifier === 'number' ? (0, _domFns$1.getTouch)(e, touchIdentifier) : null;
   if (typeof touchIdentifier === 'number' && !touchObj) return null; // not the right touch
 
   var node = findDOMNode(draggableCore); // User can provide an offsetParent if desired.
 
   var offsetParent = draggableCore.props.offsetParent || node.offsetParent || node.ownerDocument.body;
-  return (0, domFns.offsetXYFromParent)(touchObj || e, offsetParent, draggableCore.props.scale);
+  return (0, _domFns$1.offsetXYFromParent)(touchObj || e, offsetParent, draggableCore.props.scale);
 } // Create an data object exposed by <DraggableCore>'s events
 
 
@@ -7124,7 +7187,7 @@ function createCoreData(draggable
 /*: DraggableData*/
 {
   var state = draggable.state;
-  var isStart = !(0, shims.isNum)(state.lastX);
+  var isStart = !(0, _shims$1.isNum)(state.lastX);
   var node = findDOMNode(draggable);
 
   if (isStart) {
@@ -7201,46 +7264,37 @@ function findDOMNode(draggable
   return node;
 }
 
-var positionFns = /*#__PURE__*/Object.defineProperty({
-	getBoundPosition: getBoundPosition_1,
-	snapToGrid: snapToGrid_1,
-	canDragX: canDragX_1,
-	canDragY: canDragY_1,
-	getControlPosition: getControlPosition_1,
-	createCoreData: createCoreData_1,
-	createDraggableData: createDraggableData_1
-}, '__esModule', {value: true});
+var DraggableCore$2 = {};
 
-var _default$1 = log;
+var log$1 = {};
+
+Object.defineProperty(log$1, "__esModule", {
+  value: true
+});
+log$1.default = log;
 
 /*eslint no-console:0*/
 function log() {
 }
 
-var log_1 = /*#__PURE__*/Object.defineProperty({
-	default: _default$1
-}, '__esModule', {value: true});
-
-var DraggableCore_1$1 = createCommonjsModule(function (module, exports) {
-
-Object.defineProperty(exports, "__esModule", {
+Object.defineProperty(DraggableCore$2, "__esModule", {
   value: true
 });
-exports.default = void 0;
+DraggableCore$2.default = void 0;
 
 var React = _interopRequireWildcard(React__default);
 
-var _propTypes = _interopRequireDefault(propTypes);
+var _propTypes = _interopRequireDefault(propTypes.exports);
 
 var _reactDom = _interopRequireDefault(require$$2);
 
+var _domFns = domFns;
 
+var _positionFns = positionFns;
 
+var _shims = shims;
 
-
-
-
-var _log = _interopRequireDefault(log_1);
+var _log = _interopRequireDefault(log$1);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -7342,7 +7396,7 @@ var dragEventFor = eventsFor.mouse;
 // <DraggableCore> is for advanced usage of <Draggable>. It maintains minimal internal state so it can
 // work well with libraries that require more control over the element.
 //
-var DraggableCore = /*#__PURE__*/function (_React$Component) {
+var DraggableCore$1 = /*#__PURE__*/function (_React$Component) {
   _inherits(DraggableCore, _React$Component);
 
   var _super = _createSuper(DraggableCore);
@@ -7383,7 +7437,7 @@ var DraggableCore = /*#__PURE__*/function (_React$Component) {
 
       var ownerDocument = thisNode.ownerDocument; // Short circuit if handle or cancel prop was provided and selector doesn't match.
 
-      if (_this.props.disabled || !(e.target instanceof ownerDocument.defaultView.Node) || _this.props.handle && !(0, domFns.matchesSelectorAndParentsTo)(e.target, _this.props.handle, thisNode) || _this.props.cancel && (0, domFns.matchesSelectorAndParentsTo)(e.target, _this.props.cancel, thisNode)) {
+      if (_this.props.disabled || !(e.target instanceof ownerDocument.defaultView.Node) || _this.props.handle && !(0, _domFns.matchesSelectorAndParentsTo)(e.target, _this.props.handle, thisNode) || _this.props.cancel && (0, _domFns.matchesSelectorAndParentsTo)(e.target, _this.props.cancel, thisNode)) {
         return;
       } // Prevent scrolling on mobile devices, like ipad/iphone.
       // Important that this is after handle/cancel.
@@ -7393,20 +7447,20 @@ var DraggableCore = /*#__PURE__*/function (_React$Component) {
       // distinguish between individual touches on multitouch screens by identifying which
       // touchpoint was set to this element.
 
-      var touchIdentifier = (0, domFns.getTouchIdentifier)(e);
+      var touchIdentifier = (0, _domFns.getTouchIdentifier)(e);
 
       _this.setState({
         touchIdentifier: touchIdentifier
       }); // Get the current drag point from the event. This is used as the offset.
 
 
-      var position = (0, positionFns.getControlPosition)(e, touchIdentifier, _assertThisInitialized(_this));
+      var position = (0, _positionFns.getControlPosition)(e, touchIdentifier, _assertThisInitialized(_this));
       if (position == null) return; // not possible but satisfies flow
 
       var x = position.x,
           y = position.y; // Create an event object with all the data parents need to make a decision here.
 
-      var coreEvent = (0, positionFns.createCoreData)(_assertThisInitialized(_this), x, y);
+      var coreEvent = (0, _positionFns.createCoreData)(_assertThisInitialized(_this), x, y);
       (0, _log.default)('DraggableCore: handleDragStart: %j', coreEvent); // Call event handler. If it returns explicit false, cancel.
 
       (0, _log.default)('calling', _this.props.onStart);
@@ -7416,7 +7470,7 @@ var DraggableCore = /*#__PURE__*/function (_React$Component) {
       if (shouldUpdate === false || _this.mounted === false) return; // Add a style to the body to disable user-select. This prevents text from
       // being selected all over the page.
 
-      if (_this.props.enableUserSelectHack) (0, domFns.addUserSelectStyles)(ownerDocument); // Initiate dragging. Set the current x and y as offsets
+      if (_this.props.enableUserSelectHack) (0, _domFns.addUserSelectStyles)(ownerDocument); // Initiate dragging. Set the current x and y as offsets
       // so we know how much we've moved during the drag. This allows us
       // to drag elements around even if they have been moved, without issue.
 
@@ -7429,13 +7483,13 @@ var DraggableCore = /*#__PURE__*/function (_React$Component) {
       // is a touch-capable device.
 
 
-      (0, domFns.addEvent)(ownerDocument, dragEventFor.move, _this.handleDrag);
-      (0, domFns.addEvent)(ownerDocument, dragEventFor.stop, _this.handleDragStop);
+      (0, _domFns.addEvent)(ownerDocument, dragEventFor.move, _this.handleDrag);
+      (0, _domFns.addEvent)(ownerDocument, dragEventFor.stop, _this.handleDragStop);
     });
 
     _defineProperty(_assertThisInitialized(_this), "handleDrag", function (e) {
       // Get the current drag point from the event. This is used as the offset.
-      var position = (0, positionFns.getControlPosition)(e, _this.state.touchIdentifier, _assertThisInitialized(_this));
+      var position = (0, _positionFns.getControlPosition)(e, _this.state.touchIdentifier, _assertThisInitialized(_this));
       if (position == null) return;
       var x = position.x,
           y = position.y; // Snap to grid if prop has been provided
@@ -7444,7 +7498,7 @@ var DraggableCore = /*#__PURE__*/function (_React$Component) {
         var deltaX = x - _this.state.lastX,
             deltaY = y - _this.state.lastY;
 
-        var _snapToGrid = (0, positionFns.snapToGrid)(_this.props.grid, deltaX, deltaY);
+        var _snapToGrid = (0, _positionFns.snapToGrid)(_this.props.grid, deltaX, deltaY);
 
         var _snapToGrid2 = _slicedToArray(_snapToGrid, 2);
 
@@ -7455,7 +7509,7 @@ var DraggableCore = /*#__PURE__*/function (_React$Component) {
         x = _this.state.lastX + deltaX, y = _this.state.lastY + deltaY;
       }
 
-      var coreEvent = (0, positionFns.createCoreData)(_assertThisInitialized(_this), x, y);
+      var coreEvent = (0, _positionFns.createCoreData)(_assertThisInitialized(_this), x, y);
       (0, _log.default)('DraggableCore: handleDrag: %j', coreEvent); // Call event handler. If it returns explicit false, trigger end.
 
       var shouldUpdate = _this.props.onDrag(e, coreEvent);
@@ -7489,11 +7543,11 @@ var DraggableCore = /*#__PURE__*/function (_React$Component) {
 
     _defineProperty(_assertThisInitialized(_this), "handleDragStop", function (e) {
       if (!_this.state.dragging) return;
-      var position = (0, positionFns.getControlPosition)(e, _this.state.touchIdentifier, _assertThisInitialized(_this));
+      var position = (0, _positionFns.getControlPosition)(e, _this.state.touchIdentifier, _assertThisInitialized(_this));
       if (position == null) return;
       var x = position.x,
           y = position.y;
-      var coreEvent = (0, positionFns.createCoreData)(_assertThisInitialized(_this), x, y); // Call event handler
+      var coreEvent = (0, _positionFns.createCoreData)(_assertThisInitialized(_this), x, y); // Call event handler
 
       var shouldContinue = _this.props.onStop(e, coreEvent);
 
@@ -7503,7 +7557,7 @@ var DraggableCore = /*#__PURE__*/function (_React$Component) {
 
       if (thisNode) {
         // Remove user-select hack
-        if (_this.props.enableUserSelectHack) (0, domFns.removeUserSelectStyles)(thisNode.ownerDocument);
+        if (_this.props.enableUserSelectHack) (0, _domFns.removeUserSelectStyles)(thisNode.ownerDocument);
       }
 
       (0, _log.default)('DraggableCore: handleDragStop: %j', coreEvent); // Reset the el.
@@ -7517,8 +7571,8 @@ var DraggableCore = /*#__PURE__*/function (_React$Component) {
       if (thisNode) {
         // Remove event handlers
         (0, _log.default)('DraggableCore: Removing handlers');
-        (0, domFns.removeEvent)(thisNode.ownerDocument, dragEventFor.move, _this.handleDrag);
-        (0, domFns.removeEvent)(thisNode.ownerDocument, dragEventFor.stop, _this.handleDragStop);
+        (0, _domFns.removeEvent)(thisNode.ownerDocument, dragEventFor.move, _this.handleDrag);
+        (0, _domFns.removeEvent)(thisNode.ownerDocument, dragEventFor.stop, _this.handleDragStop);
       }
     });
 
@@ -7557,7 +7611,7 @@ var DraggableCore = /*#__PURE__*/function (_React$Component) {
       var thisNode = this.findDOMNode();
 
       if (thisNode) {
-        (0, domFns.addEvent)(thisNode, eventsFor.touch.start, this.onTouchStart, {
+        (0, _domFns.addEvent)(thisNode, eventsFor.touch.start, this.onTouchStart, {
           passive: false
         });
       }
@@ -7572,14 +7626,14 @@ var DraggableCore = /*#__PURE__*/function (_React$Component) {
 
       if (thisNode) {
         var ownerDocument = thisNode.ownerDocument;
-        (0, domFns.removeEvent)(ownerDocument, eventsFor.mouse.move, this.handleDrag);
-        (0, domFns.removeEvent)(ownerDocument, eventsFor.touch.move, this.handleDrag);
-        (0, domFns.removeEvent)(ownerDocument, eventsFor.mouse.stop, this.handleDragStop);
-        (0, domFns.removeEvent)(ownerDocument, eventsFor.touch.stop, this.handleDragStop);
-        (0, domFns.removeEvent)(thisNode, eventsFor.touch.start, this.onTouchStart, {
+        (0, _domFns.removeEvent)(ownerDocument, eventsFor.mouse.move, this.handleDrag);
+        (0, _domFns.removeEvent)(ownerDocument, eventsFor.touch.move, this.handleDrag);
+        (0, _domFns.removeEvent)(ownerDocument, eventsFor.mouse.stop, this.handleDragStop);
+        (0, _domFns.removeEvent)(ownerDocument, eventsFor.touch.stop, this.handleDragStop);
+        (0, _domFns.removeEvent)(thisNode, eventsFor.touch.start, this.onTouchStart, {
           passive: false
         });
-        if (this.props.enableUserSelectHack) (0, domFns.removeUserSelectStyles)(ownerDocument);
+        if (this.props.enableUserSelectHack) (0, _domFns.removeUserSelectStyles)(ownerDocument);
       }
     } // React Strict Mode compatibility: if `nodeRef` is passed, we will use it instead of trying to find
     // the underlying DOM node ourselves. See the README for more information.
@@ -7612,11 +7666,11 @@ var DraggableCore = /*#__PURE__*/function (_React$Component) {
   return DraggableCore;
 }(React.Component);
 
-exports.default = DraggableCore;
+DraggableCore$2.default = DraggableCore$1;
 
-_defineProperty(DraggableCore, "displayName", 'DraggableCore');
+_defineProperty(DraggableCore$1, "displayName", 'DraggableCore');
 
-_defineProperty(DraggableCore, "propTypes", {
+_defineProperty(DraggableCore$1, "propTypes", {
   /**
    * `allowAnyClick` allows dragging using any mouse button.
    * By default, we only accept the left button.
@@ -7752,12 +7806,12 @@ _defineProperty(DraggableCore, "propTypes", {
   /**
    * These properties should be defined on the child, not here.
    */
-  className: shims.dontSetMe,
-  style: shims.dontSetMe,
-  transform: shims.dontSetMe
+  className: _shims.dontSetMe,
+  style: _shims.dontSetMe,
+  transform: _shims.dontSetMe
 });
 
-_defineProperty(DraggableCore, "defaultProps", {
+_defineProperty(DraggableCore$1, "defaultProps", {
   allowAnyClick: false,
   // by default only accept left click
   cancel: null,
@@ -7773,9 +7827,8 @@ _defineProperty(DraggableCore, "defaultProps", {
   onMouseDown: function onMouseDown() {},
   scale: 1
 });
-});
 
-var Draggable_1 = createCommonjsModule(function (module, exports) {
+(function (exports) {
 
 Object.defineProperty(exports, "__esModule", {
   value: true
@@ -7790,21 +7843,21 @@ exports.default = void 0;
 
 var React = _interopRequireWildcard(React__default);
 
-var _propTypes = _interopRequireDefault(propTypes);
+var _propTypes = _interopRequireDefault(propTypes.exports);
 
 var _reactDom = _interopRequireDefault(require$$2);
 
-var _classnames = _interopRequireDefault(classnames);
+var _classnames = _interopRequireDefault(classnames.exports);
 
+var _domFns = domFns;
 
+var _positionFns = positionFns;
 
+var _shims = shims;
 
+var _DraggableCore = _interopRequireDefault(DraggableCore$2);
 
-
-
-var _DraggableCore = _interopRequireDefault(DraggableCore_1$1);
-
-var _log = _interopRequireDefault(log_1);
+var _log = _interopRequireDefault(log$1);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -7903,7 +7956,7 @@ var Draggable = /*#__PURE__*/function (_React$Component) {
     _defineProperty(_assertThisInitialized(_this), "onDragStart", function (e, coreData) {
       (0, _log.default)('Draggable: onDragStart: %j', coreData); // Short-circuit if user's callback killed it.
 
-      var shouldStart = _this.props.onStart(e, (0, positionFns.createDraggableData)(_assertThisInitialized(_this), coreData)); // Kills start event on core as well, so move handlers are never bound.
+      var shouldStart = _this.props.onStart(e, (0, _positionFns.createDraggableData)(_assertThisInitialized(_this), coreData)); // Kills start event on core as well, so move handlers are never bound.
 
 
       if (shouldStart === false) return false;
@@ -7917,7 +7970,7 @@ var Draggable = /*#__PURE__*/function (_React$Component) {
     _defineProperty(_assertThisInitialized(_this), "onDrag", function (e, coreData) {
       if (!_this.state.dragging) return false;
       (0, _log.default)('Draggable: onDrag: %j', coreData);
-      var uiData = (0, positionFns.createDraggableData)(_assertThisInitialized(_this), coreData);
+      var uiData = (0, _positionFns.createDraggableData)(_assertThisInitialized(_this), coreData);
       var newState
       /*: $Shape<DraggableState>*/
       = {
@@ -7935,7 +7988,7 @@ var Draggable = /*#__PURE__*/function (_React$Component) {
         newState.x += _this.state.slackX;
         newState.y += _this.state.slackY; // Get bound position. This will ceil/floor the x and y within the boundaries.
 
-        var _getBoundPosition = (0, positionFns.getBoundPosition)(_assertThisInitialized(_this), newState.x, newState.y),
+        var _getBoundPosition = (0, _positionFns.getBoundPosition)(_assertThisInitialized(_this), newState.x, newState.y),
             _getBoundPosition2 = _slicedToArray(_getBoundPosition, 2),
             newStateX = _getBoundPosition2[0],
             newStateY = _getBoundPosition2[1];
@@ -7963,7 +8016,7 @@ var Draggable = /*#__PURE__*/function (_React$Component) {
     _defineProperty(_assertThisInitialized(_this), "onDragStop", function (e, coreData) {
       if (!_this.state.dragging) return false; // Short-circuit if user's callback killed it.
 
-      var shouldContinue = _this.props.onStop(e, (0, positionFns.createDraggableData)(_assertThisInitialized(_this), coreData));
+      var shouldContinue = _this.props.onStop(e, (0, _positionFns.createDraggableData)(_assertThisInitialized(_this), coreData));
 
       if (shouldContinue === false) return false;
       (0, _log.default)('Draggable: onDragStop: %j', coreData);
@@ -8067,19 +8120,19 @@ var Draggable = /*#__PURE__*/function (_React$Component) {
       var validPosition = position || defaultPosition;
       var transformOpts = {
         // Set left if horizontal drag is enabled
-        x: (0, positionFns.canDragX)(this) && draggable ? this.state.x : validPosition.x,
+        x: (0, _positionFns.canDragX)(this) && draggable ? this.state.x : validPosition.x,
         // Set top if vertical drag is enabled
-        y: (0, positionFns.canDragY)(this) && draggable ? this.state.y : validPosition.y
+        y: (0, _positionFns.canDragY)(this) && draggable ? this.state.y : validPosition.y
       }; // If this element was SVG, we use the `transform` attribute.
 
       if (this.state.isElementSVG) {
-        svgTransform = (0, domFns.createSVGTransform)(transformOpts, positionOffset);
+        svgTransform = (0, _domFns.createSVGTransform)(transformOpts, positionOffset);
       } else {
         // Add a CSS transform to move the element around. This allows us to move the element around
         // without worrying about whether or not it is relatively or absolutely positioned.
         // If the item you are dragging already has a transform set, wrap it in a <span> so <Draggable>
         // has a clean slate.
-        style = (0, domFns.createCSSTransform)(transformOpts, positionOffset);
+        style = (0, _domFns.createCSSTransform)(transformOpts, positionOffset);
       } // Mark with class while dragging
 
 
@@ -8211,9 +8264,9 @@ _defineProperty(Draggable, "propTypes", _objectSpread(_objectSpread({}, _Draggab
   /**
    * These properties should be defined on the child, not here.
    */
-  className: shims.dontSetMe,
-  style: shims.dontSetMe,
-  transform: shims.dontSetMe
+  className: _shims.dontSetMe,
+  style: _shims.dontSetMe,
+  transform: _shims.dontSetMe
 }));
 
 _defineProperty(Draggable, "defaultProps", _objectSpread(_objectSpread({}, _DraggableCore.default.defaultProps), {}, {
@@ -8229,23 +8282,24 @@ _defineProperty(Draggable, "defaultProps", _objectSpread(_objectSpread({}, _Drag
   position: null,
   scale: 1
 }));
-});
+}(Draggable$1));
 
-var Draggable = Draggable_1.default,
-    DraggableCore = Draggable_1.DraggableCore; // Previous versions of this lib exported <Draggable> as the root export. As to no-// them, or TypeScript, we export *both* as the root and as 'default'.
+var _require = Draggable$1,
+    Draggable = _require.default,
+    DraggableCore = _require.DraggableCore; // Previous versions of this lib exported <Draggable> as the root export. As to no-// them, or TypeScript, we export *both* as the root and as 'default'.
 // See https://github.com/mzabriskie/react-draggable/pull/254
 // and https://github.com/mzabriskie/react-draggable/issues/266
 
 
-var cjs = Draggable;
-var _default = Draggable;
-var DraggableCore_1 = DraggableCore;
-cjs.default = _default;
-cjs.DraggableCore = DraggableCore_1;
+cjs.exports = Draggable;
+cjs.exports.default = Draggable;
+var DraggableCore_1 = cjs.exports.DraggableCore = DraggableCore;
 
-function ownKeys$6(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+var ReactDraggable = cjs.exports;
 
-function _objectSpread$6(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys$6(Object(source), true).forEach(function (key) { _defineProperty$1(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys$6(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+function ownKeys$b(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) { symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); } keys.push.apply(keys, symbols); } return keys; }
+
+function _objectSpread$b(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys$b(Object(source), true).forEach(function (key) { _defineProperty$2(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys$b(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
 var NodesSelection = (function (_ref) {
   var onSelectionDragStart = _ref.onSelectionDragStart,
       onSelectionDrag = _ref.onSelectionDrag,
@@ -8255,7 +8309,7 @@ var NodesSelection = (function (_ref) {
   var _useStoreState = useStoreState(function (state) {
     return state.transform;
   }),
-      _useStoreState2 = _slicedToArray(_useStoreState, 3),
+      _useStoreState2 = _slicedToArray$1(_useStoreState, 3),
       tX = _useStoreState2[0],
       tY = _useStoreState2[1],
       tScale = _useStoreState2[2];
@@ -8290,7 +8344,7 @@ var NodesSelection = (function (_ref) {
       var matchingNode = nodes.find(function (node) {
         return node.id === selectedNode.id;
       });
-      return _objectSpread$6(_objectSpread$6({}, matchingNode), {}, {
+      return _objectSpread$b(_objectSpread$b({}, matchingNode), {}, {
         position: matchingNode === null || matchingNode === void 0 ? void 0 : matchingNode.__rf.position
       });
     }) : [];
@@ -8350,7 +8404,7 @@ var NodesSelection = (function (_ref) {
   return /*#__PURE__*/React__default.createElement("div", {
     className: "react-flow__nodesselection",
     style: style
-  }, /*#__PURE__*/React__default.createElement(cjs, {
+  }, /*#__PURE__*/React__default.createElement(ReactDraggable, {
     scale: tScale,
     grid: grid,
     onStart: function onStart(event) {
@@ -8396,6 +8450,7 @@ var FlowRenderer = function FlowRenderer(_ref) {
       defaultPosition = _ref.defaultPosition,
       defaultZoom = _ref.defaultZoom,
       translateExtent = _ref.translateExtent,
+      preventScrolling = _ref.preventScrolling,
       onSelectionDragStart = _ref.onSelectionDragStart,
       onSelectionDrag = _ref.onSelectionDrag,
       onSelectionDragStop = _ref.onSelectionDragStop,
@@ -8442,7 +8497,8 @@ var FlowRenderer = function FlowRenderer(_ref) {
     defaultPosition: defaultPosition,
     defaultZoom: defaultZoom,
     translateExtent: translateExtent,
-    zoomActivationKeyCode: zoomActivationKeyCode
+    zoomActivationKeyCode: zoomActivationKeyCode,
+    preventScrolling: preventScrolling
   }, children, /*#__PURE__*/React__default.createElement(UserSelection, {
     selectionKeyPressed: selectionKeyPressed
   }), nodesSelectionActive && /*#__PURE__*/React__default.createElement(NodesSelection, {
@@ -8571,6 +8627,12 @@ var NodeRenderer = function NodeRenderer(props) {
 NodeRenderer.displayName = 'NodeRenderer';
 var NodeRenderer$1 = /*#__PURE__*/memo(NodeRenderer);
 
+var _excluded$3 = ["x", "y", "label", "labelStyle", "labelShowBg", "labelBgStyle", "labelBgPadding", "labelBgBorderRadius", "children", "className"];
+
+function ownKeys$a(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) { symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); } keys.push.apply(keys, symbols); } return keys; }
+
+function _objectSpread$a(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys$a(Object(source), true).forEach(function (key) { _defineProperty$2(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys$a(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+
 var EdgeText = function EdgeText(_ref) {
   var x = _ref.x,
       y = _ref.y,
@@ -8587,7 +8649,7 @@ var EdgeText = function EdgeText(_ref) {
       labelBgBorderRadius = _ref$labelBgBorderRad === void 0 ? 2 : _ref$labelBgBorderRad,
       children = _ref.children,
       className = _ref.className,
-      rest = _objectWithoutProperties(_ref, ["x", "y", "label", "labelStyle", "labelShowBg", "labelBgStyle", "labelBgPadding", "labelBgBorderRadius", "children", "className"]);
+      rest = _objectWithoutProperties(_ref, _excluded$3);
 
   var edgeRef = useRef(null);
 
@@ -8597,7 +8659,7 @@ var EdgeText = function EdgeText(_ref) {
     width: 0,
     height: 0
   }),
-      _useState2 = _slicedToArray(_useState, 2),
+      _useState2 = _slicedToArray$1(_useState, 2),
       edgeTextBbox = _useState2[0],
       setEdgeTextBbox = _useState2[1];
 
@@ -8618,7 +8680,7 @@ var EdgeText = function EdgeText(_ref) {
     return null;
   }
 
-  return /*#__PURE__*/React__default.createElement("g", Object.assign({
+  return /*#__PURE__*/React__default.createElement("g", _objectSpread$a({
     transform: "translate(".concat(x - edgeTextBbox.width / 2, " ").concat(y - edgeTextBbox.height / 2, ")"),
     className: edgeTextClasses
   }, rest), labelShowBg && /*#__PURE__*/React__default.createElement("rect", {
@@ -8701,7 +8763,7 @@ function getBezierPath(_ref) {
     targetX: targetX,
     targetY: targetY
   }),
-      _getCenter2 = _slicedToArray(_getCenter, 2),
+      _getCenter2 = _slicedToArray$1(_getCenter, 2),
       _centerX = _getCenter2[0],
       _centerY = _getCenter2[1];
 
@@ -8747,7 +8809,7 @@ var BezierEdge = /*#__PURE__*/memo(function (_ref2) {
     sourcePosition: sourcePosition,
     targetPosition: targetPosition
   }),
-      _getCenter4 = _slicedToArray(_getCenter3, 2),
+      _getCenter4 = _slicedToArray$1(_getCenter3, 2),
       centerX = _getCenter4[0],
       centerY = _getCenter4[1];
 
@@ -8834,7 +8896,7 @@ function getSmoothStepPath(_ref) {
     targetX: targetX,
     targetY: targetY
   }),
-      _getCenter2 = _slicedToArray(_getCenter, 4),
+      _getCenter2 = _slicedToArray$1(_getCenter, 4),
       _centerX = _getCenter2[0],
       _centerY = _getCenter2[1],
       offsetX = _getCenter2[2],
@@ -8861,6 +8923,10 @@ function getSmoothStepPath(_ref) {
     if (sourceX <= targetX) {
       firstCornerPath = sourceY <= targetY ? rightTopCorner(cX, sourceY, cornerSize) : rightBottomCorner(cX, sourceY, cornerSize);
       secondCornerPath = sourceY <= targetY ? bottomLeftCorner(cX, targetY, cornerSize) : topLeftCorner(cX, targetY, cornerSize);
+    } else if (sourcePosition === Position.Right && targetPosition === Position.Left) {
+      // and sourceX > targetX
+      firstCornerPath = sourceY <= targetY ? leftTopCorner(cX, sourceY, cornerSize) : leftBottomCorner(cX, sourceY, cornerSize);
+      secondCornerPath = sourceY <= targetY ? bottomRightCorner(cX, targetY, cornerSize) : topRightCorner(cX, targetY, cornerSize);
     }
   } else if (leftAndRight.includes(sourcePosition) && !leftAndRight.includes(targetPosition)) {
     if (sourceX <= targetX) {
@@ -8911,7 +8977,7 @@ var SmoothStepEdge = /*#__PURE__*/memo(function (_ref2) {
     sourcePosition: sourcePosition,
     targetPosition: targetPosition
   }),
-      _getCenter4 = _slicedToArray(_getCenter3, 2),
+      _getCenter4 = _slicedToArray$1(_getCenter3, 2),
       centerX = _getCenter4[0],
       centerY = _getCenter4[1];
 
@@ -8959,7 +9025,7 @@ var ConnectionLine = (function (_ref) {
       CustomConnectionLineComponent = _ref.CustomConnectionLineComponent;
 
   var _useState = useState(null),
-      _useState2 = _slicedToArray(_useState, 2),
+      _useState2 = _slicedToArray$1(_useState, 2),
       sourceNode = _useState2[0],
       setSourceNode = _useState2[1];
 
@@ -9086,8 +9152,11 @@ var MarkerDefinitions = function MarkerDefinitions(_ref2) {
 
 MarkerDefinitions.displayName = 'MarkerDefinitions';
 
+function ownKeys$9(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) { symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); } keys.push.apply(keys, symbols); } return keys; }
+
+function _objectSpread$9(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys$9(Object(source), true).forEach(function (key) { _defineProperty$2(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys$9(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
 var StepEdge = /*#__PURE__*/memo(function (props) {
-  return /*#__PURE__*/React__default.createElement(SmoothStepEdge, Object.assign({}, props, {
+  return /*#__PURE__*/React__default.createElement(SmoothStepEdge, _objectSpread$9(_objectSpread$9({}, props), {}, {
     borderRadius: 0
   }));
 });
@@ -9177,7 +9246,7 @@ function resetRecentHandle(hoveredHandle) {
   hoveredHandle === null || hoveredHandle === void 0 ? void 0 : hoveredHandle.classList.remove('react-flow__handle-connecting');
 }
 
-function onMouseDown(event, handleId, nodeId, setConnectionNodeId, setPosition, onConnect, isTarget, isValidConnection, connectionMode, onConnectStart, onConnectStop, onConnectEnd) {
+function onMouseDown(event, handleId, nodeId, setConnectionNodeId, setPosition, onConnect, isTarget, isValidConnection, connectionMode, elementEdgeUpdaterType, onEdgeUpdateEnd, onConnectStart, onConnectStop, onConnectEnd) {
   var reactFlowNode = event.target.closest('.react-flow'); // when react-flow is used inside a shadow root we can't use document
 
   var doc = getHostForElement(event.target);
@@ -9189,13 +9258,12 @@ function onMouseDown(event, handleId, nodeId, setConnectionNodeId, setPosition, 
   var elementBelow = doc.elementFromPoint(event.clientX, event.clientY);
   var elementBelowIsTarget = elementBelow === null || elementBelow === void 0 ? void 0 : elementBelow.classList.contains('target');
   var elementBelowIsSource = elementBelow === null || elementBelow === void 0 ? void 0 : elementBelow.classList.contains('source');
-  var elementBelowIsUpdater = elementBelow === null || elementBelow === void 0 ? void 0 : elementBelow.classList.contains('react-flow__edgeupdater');
 
-  if (!reactFlowNode || !elementBelowIsTarget && !elementBelowIsSource && !elementBelowIsUpdater) {
+  if (!reactFlowNode || !elementBelowIsTarget && !elementBelowIsSource && !elementEdgeUpdaterType) {
     return;
   }
 
-  var handleType = elementBelowIsTarget ? 'target' : 'source';
+  var handleType = elementEdgeUpdaterType ? elementEdgeUpdaterType : elementBelowIsTarget ? 'target' : 'source';
   var containerBounds = reactFlowNode.getBoundingClientRect();
   var recentHoveredHandle;
   setPosition({
@@ -9250,6 +9318,11 @@ function onMouseDown(event, handleId, nodeId, setConnectionNodeId, setPosition, 
     }
 
     onConnectEnd === null || onConnectEnd === void 0 ? void 0 : onConnectEnd(event);
+
+    if (elementEdgeUpdaterType && onEdgeUpdateEnd) {
+      onEdgeUpdateEnd(event);
+    }
+
     resetRecentHandle(recentHoveredHandle);
     setConnectionNodeId({
       connectionNodeId: null,
@@ -9331,7 +9404,8 @@ var wrapEdge = (function (EdgeComponent) {
         onMouseMove = _ref.onMouseMove,
         onMouseLeave = _ref.onMouseLeave,
         edgeUpdaterRadius = _ref.edgeUpdaterRadius,
-        onEdgeUpdateStart = _ref.onEdgeUpdateStart;
+        onEdgeUpdateStart = _ref.onEdgeUpdateStart,
+        onEdgeUpdateEnd = _ref.onEdgeUpdateEnd;
     var addSelectedElements = useStoreActions(function (actions) {
       return actions.addSelectedElements;
     });
@@ -9349,7 +9423,7 @@ var wrapEdge = (function (EdgeComponent) {
     });
 
     var _useState = useState(false),
-        _useState2 = _slicedToArray(_useState, 2),
+        _useState2 = _slicedToArray$1(_useState, 2),
         updating = _useState2[0],
         setUpdating = _useState2[1];
 
@@ -9415,7 +9489,12 @@ var wrapEdge = (function (EdgeComponent) {
 
       var isTarget = isSourceHandle;
       onEdgeUpdateStart === null || onEdgeUpdateStart === void 0 ? void 0 : onEdgeUpdateStart(event, edgeElement);
-      onMouseDown(event, handleId, nodeId, setConnectionNodeId, setPosition, onConnectEdge, isTarget, isValidConnection, connectionMode);
+
+      var _onEdgeUpdate = onEdgeUpdateEnd ? function (evt) {
+        return onEdgeUpdateEnd(evt, edgeElement);
+      } : undefined;
+
+      onMouseDown(event, handleId, nodeId, setConnectionNodeId, setPosition, onConnectEdge, isTarget, isValidConnection, connectionMode, isSourceHandle ? 'target' : 'source', _onEdgeUpdate);
     }, [id, source, target, type, sourceHandleId, targetHandleId, setConnectionNodeId, setPosition, edgeElement]);
     var onEdgeUpdaterSourceMouseDown = useCallback(function (event) {
       handleEdgeUpdater(event, true);
@@ -9491,9 +9570,9 @@ var wrapEdge = (function (EdgeComponent) {
   return /*#__PURE__*/memo(EdgeWrapper);
 });
 
-function ownKeys$5(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+function ownKeys$8(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) { symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); } keys.push.apply(keys, symbols); } return keys; }
 
-function _objectSpread$5(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys$5(Object(source), true).forEach(function (key) { _defineProperty$1(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys$5(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+function _objectSpread$8(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys$8(Object(source), true).forEach(function (key) { _defineProperty$2(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys$8(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
 function createEdgeTypes(edgeTypes) {
   var standardTypes = {
     "default": wrapEdge(edgeTypes["default"] || BezierEdge),
@@ -9508,7 +9587,7 @@ function createEdgeTypes(edgeTypes) {
     res[key] = wrapEdge(edgeTypes[key] || BezierEdge);
     return res;
   }, wrappedTypes);
-  return _objectSpread$5(_objectSpread$5({}, standardTypes), specialTypes);
+  return _objectSpread$8(_objectSpread$8({}, standardTypes), specialTypes);
 }
 function getHandlePosition(position, node) {
   var handle = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
@@ -9745,7 +9824,8 @@ var Edge = function Edge(_ref) {
     onMouseLeave: props.onEdgeMouseLeave,
     edgeUpdaterRadius: props.edgeUpdaterRadius,
     onEdgeDoubleClick: props.onEdgeDoubleClick,
-    onEdgeUpdateStart: props.onEdgeUpdateStart
+    onEdgeUpdateStart: props.onEdgeUpdateStart,
+    onEdgeUpdateEnd: props.onEdgeUpdateEnd
   });
 };
 
@@ -9878,7 +9958,7 @@ var useZoomPanHelper = function useZoomPanHelper() {
           d3Zoom.transform(d3Selection, nextTransform);
         },
         fitView: function fitView() {
-          var _options$padding;
+          var _options$minZoom, _options$maxZoom, _options$padding;
 
           var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {
             padding: DEFAULT_PADDING,
@@ -9900,8 +9980,8 @@ var useZoomPanHelper = function useZoomPanHelper() {
             return !node.isHidden;
           }));
 
-          var _getTransformForBound = getTransformForBounds(bounds, width, height, minZoom, maxZoom, (_options$padding = options.padding) !== null && _options$padding !== void 0 ? _options$padding : DEFAULT_PADDING),
-              _getTransformForBound2 = _slicedToArray(_getTransformForBound, 3),
+          var _getTransformForBound = getTransformForBounds(bounds, width, height, (_options$minZoom = options.minZoom) !== null && _options$minZoom !== void 0 ? _options$minZoom : minZoom, (_options$maxZoom = options.maxZoom) !== null && _options$maxZoom !== void 0 ? _options$maxZoom : maxZoom, (_options$padding = options.padding) !== null && _options$padding !== void 0 ? _options$padding : DEFAULT_PADDING),
+              _getTransformForBound2 = _slicedToArray$1(_getTransformForBound, 3),
               x = _getTransformForBound2[0],
               y = _getTransformForBound2[1],
               zoom = _getTransformForBound2[2];
@@ -9931,7 +10011,7 @@ var useZoomPanHelper = function useZoomPanHelper() {
               maxZoom = _store$getState3.maxZoom;
 
           var _getTransformForBound3 = getTransformForBounds(bounds, width, height, minZoom, maxZoom, padding),
-              _getTransformForBound4 = _slicedToArray(_getTransformForBound3, 3),
+              _getTransformForBound4 = _slicedToArray$1(_getTransformForBound3, 3),
               x = _getTransformForBound4[0],
               y = _getTransformForBound4[1],
               zoom = _getTransformForBound4[2];
@@ -10002,6 +10082,7 @@ var GraphView = function GraphView(_ref) {
       defaultZoom = _ref.defaultZoom,
       defaultPosition = _ref.defaultPosition,
       translateExtent = _ref.translateExtent,
+      preventScrolling = _ref.preventScrolling,
       nodeExtent = _ref.nodeExtent,
       arrowHeadColor = _ref.arrowHeadColor,
       markerEndId = _ref.markerEndId,
@@ -10021,7 +10102,8 @@ var GraphView = function GraphView(_ref) {
       onEdgeMouseMove = _ref.onEdgeMouseMove,
       onEdgeMouseLeave = _ref.onEdgeMouseLeave,
       edgeUpdaterRadius = _ref.edgeUpdaterRadius,
-      onEdgeUpdateStart = _ref.onEdgeUpdateStart;
+      onEdgeUpdateStart = _ref.onEdgeUpdateStart,
+      onEdgeUpdateEnd = _ref.onEdgeUpdateEnd;
   var isInitialized = useRef(false);
   var setOnConnect = useStoreActions(function (actions) {
     return actions.setOnConnect;
@@ -10194,7 +10276,8 @@ var GraphView = function GraphView(_ref) {
     onSelectionDragStart: onSelectionDragStart,
     onSelectionDrag: onSelectionDrag,
     onSelectionDragStop: onSelectionDragStop,
-    onSelectionContextMenu: onSelectionContextMenu
+    onSelectionContextMenu: onSelectionContextMenu,
+    preventScrolling: preventScrolling
   }, /*#__PURE__*/React__default.createElement(NodeRenderer$1, {
     nodeTypes: nodeTypes,
     onElementClick: onElementClick,
@@ -10227,6 +10310,7 @@ var GraphView = function GraphView(_ref) {
     onEdgeMouseMove: onEdgeMouseMove,
     onEdgeMouseLeave: onEdgeMouseLeave,
     onEdgeUpdateStart: onEdgeUpdateStart,
+    onEdgeUpdateEnd: onEdgeUpdateEnd,
     edgeUpdaterRadius: edgeUpdaterRadius
   }));
 };
@@ -10249,6 +10333,12 @@ var NodeIdContext = /*#__PURE__*/createContext(null);
 var Provider = NodeIdContext.Provider;
 NodeIdContext.Consumer;
 
+var _excluded$2 = ["type", "position", "isValidConnection", "isConnectable", "id", "onConnect", "children", "className"];
+
+function ownKeys$7(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) { symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); } keys.push.apply(keys, symbols); } return keys; }
+
+function _objectSpread$7(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys$7(Object(source), true).forEach(function (key) { _defineProperty$2(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys$7(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+
 var alwaysValid = function alwaysValid() {
   return true;
 };
@@ -10266,7 +10356,7 @@ var Handle = function Handle(_ref) {
       onConnect = _ref.onConnect,
       children = _ref.children,
       className = _ref.className,
-      rest = _objectWithoutProperties(_ref, ["type", "position", "isValidConnection", "isConnectable", "id", "onConnect", "children", "className"]);
+      rest = _objectWithoutProperties(_ref, _excluded$2);
 
   var nodeId = useContext(NodeIdContext);
   var setPosition = useStoreActions(function (actions) {
@@ -10297,14 +10387,14 @@ var Handle = function Handle(_ref) {
     onConnect === null || onConnect === void 0 ? void 0 : onConnect(params);
   }, [onConnectAction, onConnect]);
   var onMouseDownHandler = useCallback(function (event) {
-    onMouseDown(event, handleId, nodeId, setConnectionNodeId, setPosition, onConnectExtended, isTarget, isValidConnection, connectionMode, onConnectStart, onConnectStop, onConnectEnd);
+    onMouseDown(event, handleId, nodeId, setConnectionNodeId, setPosition, onConnectExtended, isTarget, isValidConnection, connectionMode, undefined, undefined, onConnectStart, onConnectStop, onConnectEnd);
   }, [handleId, nodeId, setConnectionNodeId, setPosition, onConnectExtended, isTarget, isValidConnection, connectionMode, onConnectStart, onConnectStop, onConnectEnd]);
   var handleClasses = cc(['react-flow__handle', "react-flow__handle-".concat(position), 'nodrag', className, {
     source: !isTarget,
     target: isTarget,
     connectable: isConnectable
   }]);
-  return /*#__PURE__*/React__default.createElement("div", Object.assign({
+  return /*#__PURE__*/React__default.createElement("div", _objectSpread$7({
     "data-handleid": handleId,
     "data-nodeid": nodeId,
     "data-handlepos": position,
@@ -10367,9 +10457,9 @@ var OutputNode = function OutputNode(_ref) {
 OutputNode.displayName = 'OutputNode';
 var OutputNode$1 = /*#__PURE__*/memo(OutputNode);
 
-function ownKeys$4(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+function ownKeys$6(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) { symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); } keys.push.apply(keys, symbols); } return keys; }
 
-function _objectSpread$4(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys$4(Object(source), true).forEach(function (key) { _defineProperty$1(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys$4(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+function _objectSpread$6(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys$6(Object(source), true).forEach(function (key) { _defineProperty$2(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys$6(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
 var wrapNode = (function (NodeComponent) {
   var NodeWrapper = function NodeWrapper(_ref) {
     var id = _ref.id,
@@ -10402,7 +10492,6 @@ var wrapNode = (function (NodeComponent) {
         snapGrid = _ref.snapGrid,
         isDragging = _ref.isDragging,
         resizeObserver = _ref.resizeObserver;
-    var observerInitialized = useRef(false);
     var updateNodeDimensions = useStoreActions(function (actions) {
       return actions.updateNodeDimensions;
     });
@@ -10431,7 +10520,7 @@ var wrapNode = (function (NodeComponent) {
       return snapToGrid ? snapGrid : [1, 1];
     }, [snapToGrid, snapGrid]);
     var nodeStyle = useMemo(function () {
-      return _objectSpread$4({
+      return _objectSpread$6({
         zIndex: selected ? 10 : 3,
         transform: "translate(".concat(xPos, "px,").concat(yPos, "px)"),
         pointerEvents: isSelectable || isDraggable || onClick || onMouseEnter || onMouseMove || onMouseLeave ? 'all' : 'none',
@@ -10540,9 +10629,7 @@ var wrapNode = (function (NodeComponent) {
       onNodeDoubleClick === null || onNodeDoubleClick === void 0 ? void 0 : onNodeDoubleClick(event, node);
     }, [node, onNodeDoubleClick]);
     useLayoutEffect(function () {
-      // the resize observer calls an updateNodeDimensions initially.
-      // We don't need to force another dimension update if it hasn't happened yet
-      if (nodeElement.current && !isHidden && observerInitialized.current) {
+      if (nodeElement.current && !isHidden) {
         updateNodeDimensions([{
           id: id,
           nodeElement: nodeElement.current,
@@ -10552,7 +10639,6 @@ var wrapNode = (function (NodeComponent) {
     }, [id, isHidden, sourcePosition, targetPosition]);
     useEffect(function () {
       if (nodeElement.current) {
-        observerInitialized.current = true;
         var currNode = nodeElement.current;
         resizeObserver === null || resizeObserver === void 0 ? void 0 : resizeObserver.observe(currNode);
         return function () {
@@ -10610,9 +10696,9 @@ var wrapNode = (function (NodeComponent) {
   return /*#__PURE__*/memo(NodeWrapper);
 });
 
-function ownKeys$3(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+function ownKeys$5(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) { symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); } keys.push.apply(keys, symbols); } return keys; }
 
-function _objectSpread$3(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys$3(Object(source), true).forEach(function (key) { _defineProperty$1(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys$3(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+function _objectSpread$5(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys$5(Object(source), true).forEach(function (key) { _defineProperty$2(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys$5(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
 function createNodeTypes(nodeTypes) {
   var standardTypes = {
     input: wrapNode(nodeTypes.input || InputNode$1),
@@ -10626,7 +10712,7 @@ function createNodeTypes(nodeTypes) {
     res[key] = wrapNode(nodeTypes[key] || DefaultNode$1);
     return res;
   }, wrappedTypes);
-  return _objectSpread$3(_objectSpread$3({}, standardTypes), specialTypes);
+  return _objectSpread$5(_objectSpread$5({}, standardTypes), specialTypes);
 }
 
 // As soon as easy-peasy has implemented the effectOn hook, we can remove this component
@@ -10688,9 +10774,9 @@ var fastDeepEqual = function equal(a, b) {
   return a!==a && b!==b;
 };
 
-function ownKeys$2(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+function ownKeys$4(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) { symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); } keys.push.apply(keys, symbols); } return keys; }
 
-function _objectSpread$2(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys$2(Object(source), true).forEach(function (key) { _defineProperty$1(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys$2(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+function _objectSpread$4(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys$4(Object(source), true).forEach(function (key) { _defineProperty$2(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys$4(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
 var getHandleBounds = function getHandleBounds(nodeElement, scale) {
   var bounds = nodeElement.getBoundingClientRect();
   return {
@@ -10711,7 +10797,7 @@ var getHandleBoundsByHandleType = function getHandleBoundsByHandleType(selector,
     var dimensions = getDimensions(handle);
     var handleId = handle.getAttribute('data-handleid');
     var handlePosition = handle.getAttribute('data-handlepos');
-    return _objectSpread$2({
+    return _objectSpread$4({
       id: handleId,
       position: handlePosition,
       x: (bounds.left - parentBounds.left) / k,
@@ -10720,9 +10806,9 @@ var getHandleBoundsByHandleType = function getHandleBoundsByHandleType(selector,
   });
 };
 
-function ownKeys$1(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+function ownKeys$3(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) { symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); } keys.push.apply(keys, symbols); } return keys; }
 
-function _objectSpread$1(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys$1(Object(source), true).forEach(function (key) { _defineProperty$1(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys$1(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+function _objectSpread$3(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys$3(Object(source), true).forEach(function (key) { _defineProperty$2(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys$3(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
 function reactFlowReducer() {
   var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : initialState;
   var action = arguments.length > 1 ? arguments[1] : undefined;
@@ -10743,7 +10829,7 @@ function reactFlowReducer() {
             });
 
             if (storeNode) {
-              var updatedNode = _objectSpread$1(_objectSpread$1({}, storeNode), propElement);
+              var updatedNode = _objectSpread$3(_objectSpread$3({}, storeNode), propElement);
 
               if (storeNode.position.x !== propElement.position.x || storeNode.position.y !== propElement.position.y) {
                 updatedNode.__rf.position = propElement.position;
@@ -10765,7 +10851,7 @@ function reactFlowReducer() {
             });
 
             if (storeEdge) {
-              res.nextEdges.push(_objectSpread$1(_objectSpread$1({}, storeEdge), propElement));
+              res.nextEdges.push(_objectSpread$3(_objectSpread$3({}, storeEdge), propElement));
             } else {
               res.nextEdges.push(parseEdge(propElement));
             }
@@ -10776,7 +10862,7 @@ function reactFlowReducer() {
             nextNodes = _propElements$reduce.nextNodes,
             nextEdges = _propElements$reduce.nextEdges;
 
-        return _objectSpread$1(_objectSpread$1({}, state), {}, {
+        return _objectSpread$3(_objectSpread$3({}, state), {}, {
           nodes: nextNodes,
           edges: nextEdges
         });
@@ -10795,8 +10881,8 @@ function reactFlowReducer() {
 
             if (doUpdate) {
               var handleBounds = getHandleBounds(update.nodeElement, state.transform[2]);
-              return _objectSpread$1(_objectSpread$1({}, node), {}, {
-                __rf: _objectSpread$1(_objectSpread$1(_objectSpread$1({}, node.__rf), dimensions), {}, {
+              return _objectSpread$3(_objectSpread$3({}, node), {}, {
+                __rf: _objectSpread$3(_objectSpread$3(_objectSpread$3({}, node.__rf), dimensions), {}, {
                   handleBounds: handleBounds
                 })
               });
@@ -10805,7 +10891,7 @@ function reactFlowReducer() {
 
           return node;
         });
-        return _objectSpread$1(_objectSpread$1({}, state), {}, {
+        return _objectSpread$3(_objectSpread$3({}, state), {}, {
           nodes: updatedNodes
         });
       }
@@ -10818,7 +10904,7 @@ function reactFlowReducer() {
         var position = pos;
 
         if (state.snapToGrid) {
-          var _state$snapGrid = _slicedToArray(state.snapGrid, 2),
+          var _state$snapGrid = _slicedToArray$1(state.snapGrid, 2),
               gridSizeX = _state$snapGrid[0],
               gridSizeY = _state$snapGrid[1];
 
@@ -10830,8 +10916,8 @@ function reactFlowReducer() {
 
         var _nextNodes = state.nodes.map(function (node) {
           if (node.id === id) {
-            return _objectSpread$1(_objectSpread$1({}, node), {}, {
-              __rf: _objectSpread$1(_objectSpread$1({}, node.__rf), {}, {
+            return _objectSpread$3(_objectSpread$3({}, node), {}, {
+              __rf: _objectSpread$3(_objectSpread$3({}, node.__rf), {}, {
                 position: position
               })
             });
@@ -10840,7 +10926,7 @@ function reactFlowReducer() {
           return node;
         });
 
-        return _objectSpread$1(_objectSpread$1({}, state), {}, {
+        return _objectSpread$3(_objectSpread$3({}, state), {}, {
           nodes: _nextNodes
         });
       }
@@ -10858,8 +10944,8 @@ function reactFlowReducer() {
           if (_id === node.id || (_state$selectedElemen = state.selectedElements) !== null && _state$selectedElemen !== void 0 && _state$selectedElemen.find(function (sNode) {
             return sNode.id === node.id;
           })) {
-            var updatedNode = _objectSpread$1(_objectSpread$1({}, node), {}, {
-              __rf: _objectSpread$1(_objectSpread$1({}, node.__rf), {}, {
+            var updatedNode = _objectSpread$3(_objectSpread$3({}, node), {}, {
+              __rf: _objectSpread$3(_objectSpread$3({}, node.__rf), {}, {
                 isDragging: isDragging
               })
             });
@@ -10877,7 +10963,7 @@ function reactFlowReducer() {
           return node;
         });
 
-        return _objectSpread$1(_objectSpread$1({}, state), {}, {
+        return _objectSpread$3(_objectSpread$3({}, state), {}, {
           nodes: _nextNodes2
         });
       }
@@ -10885,7 +10971,7 @@ function reactFlowReducer() {
     case SET_USER_SELECTION:
       {
         var mousePos = action.payload;
-        return _objectSpread$1(_objectSpread$1({}, state), {}, {
+        return _objectSpread$3(_objectSpread$3({}, state), {}, {
           selectionActive: true,
           userSelectionRect: {
             width: 0,
@@ -10907,7 +10993,7 @@ function reactFlowReducer() {
         var startX = (_state$userSelectionR = state.userSelectionRect.startX) !== null && _state$userSelectionR !== void 0 ? _state$userSelectionR : 0;
         var startY = (_state$userSelectionR2 = state.userSelectionRect.startY) !== null && _state$userSelectionR2 !== void 0 ? _state$userSelectionR2 : 0;
 
-        var nextUserSelectRect = _objectSpread$1(_objectSpread$1({}, state.userSelectionRect), {}, {
+        var nextUserSelectRect = _objectSpread$3(_objectSpread$3({}, state.userSelectionRect), {}, {
           x: _mousePos.x < startX ? _mousePos.x : state.userSelectionRect.x,
           y: _mousePos.y < startY ? _mousePos.y : state.userSelectionRect.y,
           width: Math.abs(_mousePos.x - startX),
@@ -10921,7 +11007,7 @@ function reactFlowReducer() {
         var selectedElementsUpdate = selectedElementsChanged ? {
           selectedElements: nextSelectedElements.length > 0 ? nextSelectedElements : null
         } : {};
-        return _objectSpread$1(_objectSpread$1(_objectSpread$1({}, state), selectedElementsUpdate), {}, {
+        return _objectSpread$3(_objectSpread$3(_objectSpread$3({}, state), selectedElementsUpdate), {}, {
           userSelectionRect: nextUserSelectRect
         });
       }
@@ -10934,9 +11020,9 @@ function reactFlowReducer() {
           return isNode(node) && node.__rf;
         });
 
-        var stateUpdate = _objectSpread$1(_objectSpread$1({}, state), {}, {
+        var stateUpdate = _objectSpread$3(_objectSpread$3({}, state), {}, {
           selectionActive: false,
-          userSelectionRect: _objectSpread$1(_objectSpread$1({}, state.userSelectionRect), {}, {
+          userSelectionRect: _objectSpread$3(_objectSpread$3({}, state.userSelectionRect), {}, {
             draw: false
           })
         });
@@ -10959,7 +11045,7 @@ function reactFlowReducer() {
         var selectedElementsArr = Array.isArray(elements) ? elements : [elements];
         var selectedElementsUpdated = !fastDeepEqual(selectedElementsArr, state.selectedElements);
         var selectedElements = selectedElementsUpdated ? selectedElementsArr : state.selectedElements;
-        return _objectSpread$1(_objectSpread$1({}, state), {}, {
+        return _objectSpread$3(_objectSpread$3({}, state), {}, {
           selectedElements: selectedElements
         });
       }
@@ -10982,7 +11068,7 @@ function reactFlowReducer() {
 
         var _nextSelectedElements = _selectedElementsUpdated ? _nextElements : state.selectedElements;
 
-        return _objectSpread$1(_objectSpread$1({}, state), {}, {
+        return _objectSpread$3(_objectSpread$3({}, state), {}, {
           selectedElements: _nextSelectedElements
         });
       }
@@ -10994,7 +11080,7 @@ function reactFlowReducer() {
             d3Selection = _action$payload3.d3Selection,
             d3ZoomHandler = _action$payload3.d3ZoomHandler,
             transform = _action$payload3.transform;
-        return _objectSpread$1(_objectSpread$1({}, state), {}, {
+        return _objectSpread$3(_objectSpread$3({}, state), {}, {
           d3Zoom: d3Zoom,
           d3Selection: d3Selection,
           d3ZoomHandler: d3ZoomHandler,
@@ -11008,7 +11094,7 @@ function reactFlowReducer() {
 
         var minZoom = action.payload;
         (_state$d3Zoom = state.d3Zoom) === null || _state$d3Zoom === void 0 ? void 0 : _state$d3Zoom.scaleExtent([minZoom, state.maxZoom]);
-        return _objectSpread$1(_objectSpread$1({}, state), {}, {
+        return _objectSpread$3(_objectSpread$3({}, state), {}, {
           minZoom: minZoom
         });
       }
@@ -11019,7 +11105,7 @@ function reactFlowReducer() {
 
         var maxZoom = action.payload;
         (_state$d3Zoom2 = state.d3Zoom) === null || _state$d3Zoom2 === void 0 ? void 0 : _state$d3Zoom2.scaleExtent([state.minZoom, maxZoom]);
-        return _objectSpread$1(_objectSpread$1({}, state), {}, {
+        return _objectSpread$3(_objectSpread$3({}, state), {}, {
           maxZoom: maxZoom
         });
       }
@@ -11030,7 +11116,7 @@ function reactFlowReducer() {
 
         var translateExtent = action.payload;
         (_state$d3Zoom3 = state.d3Zoom) === null || _state$d3Zoom3 === void 0 ? void 0 : _state$d3Zoom3.translateExtent(translateExtent);
-        return _objectSpread$1(_objectSpread$1({}, state), {}, {
+        return _objectSpread$3(_objectSpread$3({}, state), {}, {
           translateExtent: translateExtent
         });
       }
@@ -11038,11 +11124,11 @@ function reactFlowReducer() {
     case SET_NODE_EXTENT:
       {
         var nodeExtent = action.payload;
-        return _objectSpread$1(_objectSpread$1({}, state), {}, {
+        return _objectSpread$3(_objectSpread$3({}, state), {}, {
           nodeExtent: nodeExtent,
           nodes: state.nodes.map(function (node) {
-            return _objectSpread$1(_objectSpread$1({}, node), {}, {
-              __rf: _objectSpread$1(_objectSpread$1({}, node.__rf), {}, {
+            return _objectSpread$3(_objectSpread$3({}, node), {}, {
+              __rf: _objectSpread$3(_objectSpread$3({}, node.__rf), {}, {
                 position: clampPosition(node.__rf.position, nodeExtent)
               })
             });
@@ -11068,7 +11154,7 @@ function reactFlowReducer() {
     case SET_ELEMENTS_SELECTABLE:
     case SET_MULTI_SELECTION_ACTIVE:
     case SET_CONNECTION_MODE:
-      return _objectSpread$1(_objectSpread$1({}, state), action.payload);
+      return _objectSpread$3(_objectSpread$3({}, state), action.payload);
 
     default:
       return state;
@@ -11125,7 +11211,7 @@ var initialState = {
   nodesConnectable: true,
   elementsSelectable: true,
   multiSelectionActive: false,
-  reactFlowVersion: "9.5.4" 
+  reactFlowVersion: "9.6.3" 
 };
 var store = configureStore(initialState);
 
@@ -11178,12 +11264,17 @@ function styleInject(css, ref) {
   }
 }
 
-var css_248z$1 = ".react-flow{width:100%;height:100%;position:relative;overflow:hidden}.react-flow__pane,.react-flow__renderer,.react-flow__selectionpane{width:100%;height:100%;position:absolute;top:0;left:0}.react-flow__pane{z-index:1}.react-flow__renderer{z-index:4}.react-flow__selectionpane{z-index:5}.react-flow__edges,.react-flow__selection{position:absolute;top:0;left:0}.react-flow__edges{pointer-events:none;z-index:2}.react-flow__edge{pointer-events:visibleStroke;}.react-flow__edge.inactive{pointer-events:none}@-webkit-keyframes dashdraw{0%{stroke-dashoffset:10}}@keyframes dashdraw{0%{stroke-dashoffset:10}}.react-flow__edge-path{fill:none}.react-flow__edge-textwrapper{pointer-events:all}.react-flow__edge-text{pointer-events:none;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.react-flow__connection{pointer-events:none;}.react-flow__connection .animated{stroke-dasharray:5;-webkit-animation:dashdraw .5s linear infinite;animation:dashdraw .5s linear infinite}.react-flow__connection-path{fill:none}.react-flow__nodes{width:100%;height:100%;pointer-events:none;z-index:3}.react-flow__node,.react-flow__nodes{position:absolute;transform-origin:0 0}.react-flow__node{-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;pointer-events:all}.react-flow__nodesselection{z-index:3;position:absolute;width:100%;height:100%;top:0;left:0;transform-origin:left top;pointer-events:none;}.react-flow__nodesselection-rect{position:absolute;pointer-events:all;cursor:-webkit-grab;cursor:grab}.react-flow__handle{pointer-events:none;}.react-flow__handle.connectable{pointer-events:all}.react-flow__handle-bottom{top:auto;left:50%;bottom:-4px;transform:translate(-50%)}.react-flow__handle-top{left:50%;top:-4px;transform:translate(-50%)}.react-flow__handle-left{top:50%;left:-4px;transform:translateY(-50%)}.react-flow__handle-right{right:-4px;top:50%;transform:translateY(-50%)}.react-flow__edgeupdater{cursor:move;pointer-events:all}.react-flow__background{position:absolute;top:0;left:0;width:100%;height:100%}.react-flow__controls{position:absolute;z-index:5;bottom:10px;left:10px;}.react-flow__controls-button{width:24px;height:24px;}.react-flow__controls-button svg{width:100%}.react-flow__minimap{position:absolute;z-index:5;bottom:10px;right:10px}";
+var css_248z$1 = ".react-flow{width:100%;height:100%;position:relative;overflow:hidden}.react-flow__pane,.react-flow__renderer,.react-flow__selectionpane{width:100%;height:100%;position:absolute;top:0;left:0}.react-flow__pane{z-index:1}.react-flow__renderer{z-index:4}.react-flow__selectionpane{z-index:5}.react-flow__edges,.react-flow__selection{position:absolute;top:0;left:0}.react-flow__edges{pointer-events:none;z-index:2}.react-flow__edge{pointer-events:visibleStroke;}.react-flow__edge.inactive{pointer-events:none}@-webkit-keyframes dashdraw{0%{stroke-dashoffset:10}}@keyframes dashdraw{0%{stroke-dashoffset:10}}.react-flow__edge-path{fill:none}.react-flow__edge-textwrapper{pointer-events:all}.react-flow__edge-text{pointer-events:none;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.react-flow__connection{pointer-events:none;}.react-flow__connection .animated{stroke-dasharray:5;-webkit-animation:dashdraw .5s linear infinite;animation:dashdraw .5s linear infinite}.react-flow__connection-path{fill:none}.react-flow__nodes{width:100%;height:100%;pointer-events:none;z-index:3}.react-flow__node,.react-flow__nodes{position:absolute;transform-origin:0 0}.react-flow__node{-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;pointer-events:all}.react-flow__nodesselection{z-index:3;position:absolute;width:100%;height:100%;top:0;left:0;transform-origin:left top;pointer-events:none;}.react-flow__nodesselection-rect{position:absolute;pointer-events:all;cursor:-webkit-grab;cursor:grab}.react-flow__handle{pointer-events:none;}.react-flow__handle.connectable{pointer-events:all}.react-flow__handle-bottom{top:auto;left:50%;bottom:-4px;transform:translate(-50%)}.react-flow__handle-top{left:50%;top:-4px;transform:translate(-50%)}.react-flow__handle-left{top:50%;left:-4px;transform:translateY(-50%)}.react-flow__handle-right{right:-4px;top:50%;transform:translateY(-50%)}.react-flow__edgeupdater{cursor:move;pointer-events:all}.react-flow__background{position:absolute;top:0;left:0;width:100%;height:100%}.react-flow__controls{position:absolute;z-index:5;bottom:10px;left:10px;}.react-flow__controls-button{width:24px;height:24px;border:none;}.react-flow__controls-button svg{width:100%}.react-flow__minimap{position:absolute;z-index:5;bottom:10px;right:10px}";
 styleInject(css_248z$1);
 
 var css_248z = ".react-flow__selection{background:rgba(0,89,220,.08);border:1px dotted rgba(0,89,220,.8)}.react-flow__edge.selected .react-flow__edge-path{stroke:#555}.react-flow__edge.animated path{stroke-dasharray:5;-webkit-animation:dashdraw .5s linear infinite;animation:dashdraw .5s linear infinite}.react-flow__edge.updating .react-flow__edge-path{stroke:#777}.react-flow__edge-path{stroke:#b1b1b7;stroke-width:1}.react-flow__edge-text{font-size:10px}.react-flow__edge-textbg{fill:#fff}.react-flow__connection-path{stroke:#b1b1b7;stroke-width:1}.react-flow__node{cursor:-webkit-grab;cursor:grab}.react-flow__node-default,.react-flow__node-input,.react-flow__node-output{padding:10px;border-radius:3px;width:150px;font-size:12px;color:#222;text-align:center;border-width:1px;border-style:solid}.react-flow__node-default.selectable:hover,.react-flow__node-input.selectable:hover,.react-flow__node-output.selectable:hover{box-shadow:0 1px 4px 1px rgba(0,0,0,.08)}.react-flow__node-input{background:#fff;border-color:#0041d0;}.react-flow__node-input.selected,.react-flow__node-input.selected:hover{box-shadow:0 0 0 .5px #0041d0}.react-flow__node-input .react-flow__handle{background:#0041d0}.react-flow__node-default{background:#fff;border-color:#1a192b;}.react-flow__node-default.selected,.react-flow__node-default.selected:hover{box-shadow:0 0 0 .5px #1a192b}.react-flow__node-default .react-flow__handle{background:#1a192b}.react-flow__node-output{background:#fff;border-color:#ff0072;}.react-flow__node-output.selected,.react-flow__node-output.selected:hover{box-shadow:0 0 0 .5px #ff0072}.react-flow__node-output .react-flow__handle{background:#ff0072}.react-flow__nodesselection-rect{background:rgba(0,89,220,.08);border:1px dotted rgba(0,89,220,.8)}.react-flow__handle{position:absolute;width:6px;height:6px;background:#555;border:1px solid #fff;border-radius:100%;}.react-flow__handle.connectable{cursor:crosshair}.react-flow__minimap{background-color:#fff}.react-flow__controls{box-shadow:0 0 2px 1px rgba(0,0,0,.08);}.react-flow__controls-button{background:#fefefe;border-bottom:1px solid #eee;box-sizing:content-box;display:flex;justify-content:center;align-items:center;width:16px;height:16px;cursor:pointer;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;padding:5px;}.react-flow__controls-button svg{max-width:12px;max-height:12px}.react-flow__controls-button:hover{background:#f4f4f4}";
 styleInject(css_248z);
 
+var _excluded$1 = ["elements", "className", "nodeTypes", "edgeTypes", "onElementClick", "onLoad", "onMove", "onMoveStart", "onMoveEnd", "onElementsRemove", "onConnect", "onConnectStart", "onConnectStop", "onConnectEnd", "onNodeMouseEnter", "onNodeMouseMove", "onNodeMouseLeave", "onNodeContextMenu", "onNodeDoubleClick", "onNodeDragStart", "onNodeDrag", "onNodeDragStop", "onSelectionChange", "onSelectionDragStart", "onSelectionDrag", "onSelectionDragStop", "onSelectionContextMenu", "connectionMode", "connectionLineType", "connectionLineStyle", "connectionLineComponent", "deleteKeyCode", "selectionKeyCode", "multiSelectionKeyCode", "zoomActivationKeyCode", "snapToGrid", "snapGrid", "onlyRenderVisibleElements", "selectNodesOnDrag", "nodesDraggable", "nodesConnectable", "elementsSelectable", "minZoom", "maxZoom", "defaultZoom", "defaultPosition", "translateExtent", "preventScrolling", "nodeExtent", "arrowHeadColor", "markerEndId", "zoomOnScroll", "zoomOnPinch", "panOnScroll", "panOnScrollSpeed", "panOnScrollMode", "zoomOnDoubleClick", "paneMoveable", "onPaneClick", "onPaneScroll", "onPaneContextMenu", "children", "onEdgeUpdate", "onEdgeContextMenu", "onEdgeDoubleClick", "onEdgeMouseEnter", "onEdgeMouseMove", "onEdgeMouseLeave", "onEdgeUpdateStart", "onEdgeUpdateEnd", "edgeUpdaterRadius", "nodeTypesId", "edgeTypesId"];
+
+function ownKeys$2(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) { symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); } keys.push.apply(keys, symbols); } return keys; }
+
+function _objectSpread$2(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys$2(Object(source), true).forEach(function (key) { _defineProperty$2(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys$2(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
 var defaultNodeTypes = {
   input: InputNode$1,
   "default": DefaultNode$1,
@@ -11258,6 +11349,8 @@ var ReactFlow = /*#__PURE__*/forwardRef(function (_ref, ref) {
       _ref$defaultPosition = _ref.defaultPosition,
       defaultPosition = _ref$defaultPosition === void 0 ? [0, 0] : _ref$defaultPosition,
       translateExtent = _ref.translateExtent,
+      _ref$preventScrolling = _ref.preventScrolling,
+      preventScrolling = _ref$preventScrolling === void 0 ? true : _ref$preventScrolling,
       nodeExtent = _ref.nodeExtent,
       _ref$arrowHeadColor = _ref.arrowHeadColor,
       arrowHeadColor = _ref$arrowHeadColor === void 0 ? '#b1b1b7' : _ref$arrowHeadColor,
@@ -11287,13 +11380,14 @@ var ReactFlow = /*#__PURE__*/forwardRef(function (_ref, ref) {
       onEdgeMouseMove = _ref.onEdgeMouseMove,
       onEdgeMouseLeave = _ref.onEdgeMouseLeave,
       onEdgeUpdateStart = _ref.onEdgeUpdateStart,
+      onEdgeUpdateEnd = _ref.onEdgeUpdateEnd,
       _ref$edgeUpdaterRadiu = _ref.edgeUpdaterRadius,
       edgeUpdaterRadius = _ref$edgeUpdaterRadiu === void 0 ? 10 : _ref$edgeUpdaterRadiu,
       _ref$nodeTypesId = _ref.nodeTypesId,
       nodeTypesId = _ref$nodeTypesId === void 0 ? '1' : _ref$nodeTypesId,
       _ref$edgeTypesId = _ref.edgeTypesId,
       edgeTypesId = _ref$edgeTypesId === void 0 ? '1' : _ref$edgeTypesId,
-      rest = _objectWithoutProperties(_ref, ["elements", "className", "nodeTypes", "edgeTypes", "onElementClick", "onLoad", "onMove", "onMoveStart", "onMoveEnd", "onElementsRemove", "onConnect", "onConnectStart", "onConnectStop", "onConnectEnd", "onNodeMouseEnter", "onNodeMouseMove", "onNodeMouseLeave", "onNodeContextMenu", "onNodeDoubleClick", "onNodeDragStart", "onNodeDrag", "onNodeDragStop", "onSelectionChange", "onSelectionDragStart", "onSelectionDrag", "onSelectionDragStop", "onSelectionContextMenu", "connectionMode", "connectionLineType", "connectionLineStyle", "connectionLineComponent", "deleteKeyCode", "selectionKeyCode", "multiSelectionKeyCode", "zoomActivationKeyCode", "snapToGrid", "snapGrid", "onlyRenderVisibleElements", "selectNodesOnDrag", "nodesDraggable", "nodesConnectable", "elementsSelectable", "minZoom", "maxZoom", "defaultZoom", "defaultPosition", "translateExtent", "nodeExtent", "arrowHeadColor", "markerEndId", "zoomOnScroll", "zoomOnPinch", "panOnScroll", "panOnScrollSpeed", "panOnScrollMode", "zoomOnDoubleClick", "paneMoveable", "onPaneClick", "onPaneScroll", "onPaneContextMenu", "children", "onEdgeUpdate", "onEdgeContextMenu", "onEdgeDoubleClick", "onEdgeMouseEnter", "onEdgeMouseMove", "onEdgeMouseLeave", "onEdgeUpdateStart", "edgeUpdaterRadius", "nodeTypesId", "edgeTypesId"]);
+      rest = _objectWithoutProperties(_ref, _excluded$1);
 
   var nodeTypesParsed = useMemo(function () {
     return createNodeTypes(nodeTypes);
@@ -11302,7 +11396,7 @@ var ReactFlow = /*#__PURE__*/forwardRef(function (_ref, ref) {
     return createEdgeTypes(edgeTypes);
   }, [edgeTypesId]);
   var reactFlowClasses = cc(['react-flow', className]);
-  return /*#__PURE__*/React__default.createElement("div", Object.assign({}, rest, {
+  return /*#__PURE__*/React__default.createElement("div", _objectSpread$2(_objectSpread$2({}, rest), {}, {
     ref: ref,
     className: reactFlowClasses
   }), /*#__PURE__*/React__default.createElement(Wrapper, null, /*#__PURE__*/React__default.createElement(GraphView$1, {
@@ -11346,6 +11440,7 @@ var ReactFlow = /*#__PURE__*/forwardRef(function (_ref, ref) {
     defaultZoom: defaultZoom,
     defaultPosition: defaultPosition,
     translateExtent: translateExtent,
+    preventScrolling: preventScrolling,
     nodeExtent: nodeExtent,
     arrowHeadColor: arrowHeadColor,
     markerEndId: markerEndId,
@@ -11370,6 +11465,7 @@ var ReactFlow = /*#__PURE__*/forwardRef(function (_ref, ref) {
     onEdgeMouseMove: onEdgeMouseMove,
     onEdgeMouseLeave: onEdgeMouseLeave,
     onEdgeUpdateStart: onEdgeUpdateStart,
+    onEdgeUpdateEnd: onEdgeUpdateEnd,
     edgeUpdaterRadius: edgeUpdaterRadius
   }), /*#__PURE__*/React__default.createElement(ElementUpdater, {
     elements: elements
@@ -11460,7 +11556,7 @@ var MiniMap = function MiniMap(_ref) {
   var _useStoreState = useStoreState(function (s) {
     return s.transform;
   }),
-      _useStoreState2 = _slicedToArray(_useStoreState, 3),
+      _useStoreState2 = _slicedToArray$1(_useStoreState, 3),
       tX = _useStoreState2[0],
       tY = _useStoreState2[1],
       tScale = _useStoreState2[2];
@@ -11544,77 +11640,82 @@ var MiniMap = function MiniMap(_ref) {
 MiniMap.displayName = 'MiniMap';
 var index$2 = /*#__PURE__*/memo(MiniMap);
 
+var _path$4;
+
 function _extends$4() { _extends$4 = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return _extends$4.apply(this, arguments); }
 
-var _ref$4 = /*#__PURE__*/React.createElement("path", {
-  d: "M32 18.133H18.133V32h-4.266V18.133H0v-4.266h13.867V0h4.266v13.867H32z"
-});
-
 function SvgPlus(props) {
-  return /*#__PURE__*/React.createElement("svg", _extends$4({
+  return /*#__PURE__*/React$1.createElement("svg", _extends$4({
     xmlns: "http://www.w3.org/2000/svg",
     viewBox: "0 0 32 32"
-  }, props), _ref$4);
+  }, props), _path$4 || (_path$4 = /*#__PURE__*/React$1.createElement("path", {
+    d: "M32 18.133H18.133V32h-4.266V18.133H0v-4.266h13.867V0h4.266v13.867H32z"
+  })));
 }
+
+var _path$3;
 
 function _extends$3() { _extends$3 = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return _extends$3.apply(this, arguments); }
 
-var _ref$3 = /*#__PURE__*/React.createElement("path", {
-  d: "M0 0h32v4.2H0z"
-});
-
 function SvgMinus(props) {
-  return /*#__PURE__*/React.createElement("svg", _extends$3({
+  return /*#__PURE__*/React$1.createElement("svg", _extends$3({
     xmlns: "http://www.w3.org/2000/svg",
     viewBox: "0 0 32 5"
-  }, props), _ref$3);
+  }, props), _path$3 || (_path$3 = /*#__PURE__*/React$1.createElement("path", {
+    d: "M0 0h32v4.2H0z"
+  })));
 }
+
+var _path$2;
 
 function _extends$2() { _extends$2 = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return _extends$2.apply(this, arguments); }
 
-var _ref$2 = /*#__PURE__*/React.createElement("path", {
-  d: "M3.692 4.63c0-.53.4-.938.939-.938h5.215V0H4.708C2.13 0 0 2.054 0 4.63v5.216h3.692V4.631zM27.354 0h-5.2v3.692h5.17c.53 0 .984.4.984.939v5.215H32V4.631A4.624 4.624 0 0027.354 0zm.954 24.83c0 .532-.4.94-.939.94h-5.215v3.768h5.215c2.577 0 4.631-2.13 4.631-4.707v-5.139h-3.692v5.139zm-23.677.94a.919.919 0 01-.939-.94v-5.138H0v5.139c0 2.577 2.13 4.707 4.708 4.707h5.138V25.77H4.631z"
-});
-
 function SvgFitview(props) {
-  return /*#__PURE__*/React.createElement("svg", _extends$2({
+  return /*#__PURE__*/React$1.createElement("svg", _extends$2({
     xmlns: "http://www.w3.org/2000/svg",
     viewBox: "0 0 32 30"
-  }, props), _ref$2);
+  }, props), _path$2 || (_path$2 = /*#__PURE__*/React$1.createElement("path", {
+    d: "M3.692 4.63c0-.53.4-.938.939-.938h5.215V0H4.708C2.13 0 0 2.054 0 4.63v5.216h3.692V4.631zM27.354 0h-5.2v3.692h5.17c.53 0 .984.4.984.939v5.215H32V4.631A4.624 4.624 0 0027.354 0zm.954 24.83c0 .532-.4.94-.939.94h-5.215v3.768h5.215c2.577 0 4.631-2.13 4.631-4.707v-5.139h-3.692v5.139zm-23.677.94a.919.919 0 01-.939-.94v-5.138H0v5.139c0 2.577 2.13 4.707 4.708 4.707h5.138V25.77H4.631z"
+  })));
 }
+
+var _path$1;
 
 function _extends$1() { _extends$1 = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return _extends$1.apply(this, arguments); }
 
-var _ref$1 = /*#__PURE__*/React.createElement("path", {
-  d: "M21.333 10.667H19.81V7.619C19.81 3.429 16.38 0 12.19 0 8 0 4.571 3.429 4.571 7.619v3.048H3.048A3.056 3.056 0 000 13.714v15.238A3.056 3.056 0 003.048 32h18.285a3.056 3.056 0 003.048-3.048V13.714a3.056 3.056 0 00-3.048-3.047zM12.19 24.533a3.056 3.056 0 01-3.047-3.047 3.056 3.056 0 013.047-3.048 3.056 3.056 0 013.048 3.048 3.056 3.056 0 01-3.048 3.047zm4.724-13.866H7.467V7.619c0-2.59 2.133-4.724 4.723-4.724 2.591 0 4.724 2.133 4.724 4.724v3.048z"
-});
-
 function SvgLock(props) {
-  return /*#__PURE__*/React.createElement("svg", _extends$1({
+  return /*#__PURE__*/React$1.createElement("svg", _extends$1({
     xmlns: "http://www.w3.org/2000/svg",
     viewBox: "0 0 25 32"
-  }, props), _ref$1);
+  }, props), _path$1 || (_path$1 = /*#__PURE__*/React$1.createElement("path", {
+    d: "M21.333 10.667H19.81V7.619C19.81 3.429 16.38 0 12.19 0 8 0 4.571 3.429 4.571 7.619v3.048H3.048A3.056 3.056 0 000 13.714v15.238A3.056 3.056 0 003.048 32h18.285a3.056 3.056 0 003.048-3.048V13.714a3.056 3.056 0 00-3.048-3.047zM12.19 24.533a3.056 3.056 0 01-3.047-3.047 3.056 3.056 0 013.047-3.048 3.056 3.056 0 013.048 3.048 3.056 3.056 0 01-3.048 3.047zm4.724-13.866H7.467V7.619c0-2.59 2.133-4.724 4.723-4.724 2.591 0 4.724 2.133 4.724 4.724v3.048z"
+  })));
 }
+
+var _path;
 
 function _extends() { _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return _extends.apply(this, arguments); }
 
-var _ref = /*#__PURE__*/React.createElement("path", {
-  d: "M21.333 10.667H19.81V7.619C19.81 3.429 16.38 0 12.19 0c-4.114 1.828-1.37 2.133.305 2.438 1.676.305 4.42 2.59 4.42 5.181v3.048H3.047A3.056 3.056 0 000 13.714v15.238A3.056 3.056 0 003.048 32h18.285a3.056 3.056 0 003.048-3.048V13.714a3.056 3.056 0 00-3.048-3.047zM12.19 24.533a3.056 3.056 0 01-3.047-3.047 3.056 3.056 0 013.047-3.048 3.056 3.056 0 013.048 3.048 3.056 3.056 0 01-3.048 3.047z"
-});
-
 function SvgUnlock(props) {
-  return /*#__PURE__*/React.createElement("svg", _extends({
+  return /*#__PURE__*/React$1.createElement("svg", _extends({
     xmlns: "http://www.w3.org/2000/svg",
     viewBox: "0 0 25 32"
-  }, props), _ref);
+  }, props), _path || (_path = /*#__PURE__*/React$1.createElement("path", {
+    d: "M21.333 10.667H19.81V7.619C19.81 3.429 16.38 0 12.19 0c-4.114 1.828-1.37 2.133.305 2.438 1.676.305 4.42 2.59 4.42 5.181v3.048H3.047A3.056 3.056 0 000 13.714v15.238A3.056 3.056 0 003.048 32h18.285a3.056 3.056 0 003.048-3.048V13.714a3.056 3.056 0 00-3.048-3.047zM12.19 24.533a3.056 3.056 0 01-3.047-3.047 3.056 3.056 0 013.047-3.048 3.056 3.056 0 013.048 3.048 3.056 3.056 0 01-3.048 3.047z"
+  })));
 }
 
+var _excluded = ["children", "className"];
+
+function ownKeys$1(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) { symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); } keys.push.apply(keys, symbols); } return keys; }
+
+function _objectSpread$1(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys$1(Object(source), true).forEach(function (key) { _defineProperty$2(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys$1(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
 var ControlButton = function ControlButton(_ref) {
   var children = _ref.children,
       className = _ref.className,
-      rest = _objectWithoutProperties(_ref, ["children", "className"]);
+      rest = _objectWithoutProperties(_ref, _excluded);
 
-  return /*#__PURE__*/React__default.createElement("div", Object.assign({
+  return /*#__PURE__*/React__default.createElement("button", _objectSpread$1({
     className: cc(['react-flow__controls-button', className])
   }, rest), children);
 };
@@ -11636,7 +11737,7 @@ var Controls = function Controls(_ref2) {
       children = _ref2.children;
 
   var _useState = useState(false),
-      _useState2 = _slicedToArray(_useState, 2),
+      _useState2 = _slicedToArray$1(_useState, 2),
       isVisible = _useState2[0],
       setIsVisible = _useState2[1];
 
@@ -11716,10 +11817,10 @@ var createGridDotsPath = function createGridDotsPath(size, fill) {
 
 var _defaultColors;
 
-function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) { symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); } keys.push.apply(keys, symbols); } return keys; }
 
-function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(Object(source), true).forEach(function (key) { _defineProperty$1(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
-var defaultColors = (_defaultColors = {}, _defineProperty$1(_defaultColors, BackgroundVariant.Dots, '#81818a'), _defineProperty$1(_defaultColors, BackgroundVariant.Lines, '#eee'), _defaultColors);
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(Object(source), true).forEach(function (key) { _defineProperty$2(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+var defaultColors = (_defaultColors = {}, _defineProperty$2(_defaultColors, BackgroundVariant.Dots, '#81818a'), _defineProperty$2(_defaultColors, BackgroundVariant.Lines, '#eee'), _defaultColors);
 
 var Background = function Background(_ref) {
   var _ref$variant = _ref.variant,
@@ -11735,7 +11836,7 @@ var Background = function Background(_ref) {
   var _useStoreState = useStoreState(function (s) {
     return s.transform;
   }),
-      _useStoreState2 = _slicedToArray(_useStoreState, 3),
+      _useStoreState2 = _slicedToArray$1(_useStoreState, 3),
       x = _useStoreState2[0],
       y = _useStoreState2[1],
       scale = _useStoreState2[2]; // when there are multiple flows on a page we need to make sure that every background gets its own pattern.

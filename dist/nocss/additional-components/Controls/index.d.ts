@@ -10,7 +10,7 @@ export interface ControlProps extends HTMLAttributes<HTMLDivElement> {
     onFitView?: () => void;
     onInteractiveChange?: (interactiveStatus: boolean) => void;
 }
-export interface ControlButtonProps extends HTMLAttributes<HTMLDivElement> {
+export interface ControlButtonProps extends HTMLAttributes<HTMLButtonElement> {
 }
 export declare const ControlButton: FC<ControlButtonProps>;
 declare const _default: React.NamedExoticComponent<ControlProps>;

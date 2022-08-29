@@ -186,6 +186,7 @@
 .react-flow__controls-button {
     width: 24px;
     height: 24px;
+    border: none;
   }
 
 .react-flow__controls-button svg {
